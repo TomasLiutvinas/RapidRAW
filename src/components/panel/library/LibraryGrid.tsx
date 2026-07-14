@@ -269,6 +269,18 @@ export default function LibraryGrid(props: any) {
     });
   }, []);
 
+  const handleSelectRecursiveFolder = useCallback(
+    (images: any[]) => {
+      const paths = images.map((image) => image.path);
+      setLibrary({
+        multiSelectedPaths: paths,
+        libraryActivePath: paths[0] ?? null,
+        selectionAnchorPath: paths[0] ?? null,
+      });
+    },
+    [setLibrary],
+  );
+
   const handleImageLoad = useCallback((path: string) => {
     loadedThumbnailsRef.current.add(path);
   }, []);
@@ -292,14 +304,15 @@ export default function LibraryGrid(props: any) {
     const headerHeight = 40;
 
     const rows: any[] = [];
+    let recursiveGroups: ReturnType<typeof groupImagesByFolder> | null = null;
 
     if (libraryViewMode === LibraryViewMode.Recursive) {
-      const groups = groupImagesByFolder(imageList, currentFolderPath);
-      groups.forEach((group) => {
+      recursiveGroups = groupImagesByFolder(imageList, currentFolderPath);
+      recursiveGroups.forEach((group) => {
         if (group.images.length === 0) return;
 
         const isExpanded = !collapsedRecursiveFolders.has(group.path);
-        rows.push({ type: 'header', path: group.path, count: group.images.length, isExpanded });
+        rows.push({ type: 'header', path: group.path, count: group.images.length, images: group.images, isExpanded });
 
         if (isExpanded) {
           for (let i = 0; i < group.images.length; i += columnCount) {
@@ -325,6 +338,7 @@ export default function LibraryGrid(props: any) {
 
     return {
       rows,
+      recursiveGroups,
       itemWidth,
       rowHeight,
       listRowHeight,
@@ -374,7 +388,7 @@ export default function LibraryGrid(props: any) {
     let found = false;
 
     if (libraryViewMode === LibraryViewMode.Recursive) {
-      const groups = groupImagesByFolder(imageList, currentFolderPath);
+      const groups = gridData.recursiveGroups || [];
       for (const group of groups) {
         if (group.images.length === 0) continue;
 
@@ -392,7 +406,7 @@ export default function LibraryGrid(props: any) {
         targetTop += rowsInGroup * rowHeight;
       }
     } else {
-      const index = imageList.findIndex((img) => img.path === activePath);
+      const index = imageList.findIndex((img: any) => img.path === activePath);
       if (index !== -1) {
         const rowIndex = Math.floor(index / columnCount);
         targetTop = rowIndex * rowHeight;
@@ -418,7 +432,7 @@ export default function LibraryGrid(props: any) {
         });
       }
     }
-  }, [activePath, gridData, multiSelectedPaths.length, listHandle, currentFolderPath, imageList, libraryViewMode]);
+  }, [activePath, gridData, multiSelectedPaths.length, listHandle, libraryViewMode]);
 
   const memoizedRowProps = useMemo(() => {
     if (!gridData) return {};
@@ -442,6 +456,7 @@ export default function LibraryGrid(props: any) {
       columnWidths: listColumnWidths,
       queueThumbnailRequest,
       onToggleRecursiveFolder: handleToggleRecursiveFolder,
+      onSelectRecursiveFolder: handleSelectRecursiveFolder,
     };
   }, [
     gridData,
@@ -457,6 +472,7 @@ export default function LibraryGrid(props: any) {
     listColumnWidths,
     queueThumbnailRequest,
     handleToggleRecursiveFolder,
+    handleSelectRecursiveFolder,
   ]);
 
   if (!gridData) {

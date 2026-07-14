@@ -187,6 +187,7 @@ export default function Editor({ onBackToLibrary, onContextMenu, transformWrappe
   } | null>(null);
   const wgpuSyncRef = useRef<number | null>(null);
   const lastWgpuTransformRef = useRef<string | null>(null);
+  const wgpuDirtyRef = useRef(true);
 
   const toggleShowOriginal = useCallback(
     () => setEditor((state) => ({ showOriginal: !state.showOriginal })),
@@ -377,6 +378,7 @@ export default function Editor({ onBackToLibrary, onContextMenu, transformWrappe
   const applyTransform = useCallback(
     (x: number, y: number, scale: number) => {
       transformStateRef.current = { positionX: x, positionY: y, scale };
+      wgpuDirtyRef.current = true;
       setTransformState({ scale, positionX: x, positionY: y });
 
       if (contentRef.current) {
@@ -1115,6 +1117,7 @@ export default function Editor({ onBackToLibrary, onContextMenu, transformWrappe
       bgPrimary: parseRgb(bgPrimaryStr),
       bgSecondary: parseRgb(bgSecondaryStr),
     };
+    wgpuDirtyRef.current = true;
   }, [
     appSettings?.useWgpuRenderer,
     selectedImage?.isReady,
@@ -1127,30 +1130,54 @@ export default function Editor({ onBackToLibrary, onContextMenu, transformWrappe
   ]);
 
   useEffect(() => {
+    wgpuDirtyRef.current = true;
+  }, [imageRenderSize.width, imageRenderSize.height, imageRenderSize.offsetX, imageRenderSize.offsetY]);
+
+  useEffect(() => {
     let isEffectActive = true;
     let isInvoking = false;
 
+    const markWgpuDirty = () => {
+      wgpuDirtyRef.current = true;
+    };
+
+    window.addEventListener('resize', markWgpuDirty);
+    document.addEventListener('visibilitychange', markWgpuDirty);
+
+    const scheduleSync = (delay = 16) => {
+      if (!isEffectActive) return;
+      wgpuSyncRef.current = window.setTimeout(syncWgpu, delay);
+    };
+
     const syncWgpu = () => {
       if (!isEffectActive) return;
+
+      if (document.hidden) {
+        scheduleSync(250);
+        return;
+      }
 
       const state = wgpuStateRef.current;
       const container = imageContainerRef.current;
 
       if (!container) {
-        if (isEffectActive) {
-          wgpuSyncRef.current = requestAnimationFrame(syncWgpu);
-        }
+        scheduleSync(100);
         return;
       }
 
       const currentRect = container.getBoundingClientRect();
 
       if (currentRect.width < 10 || currentRect.height < 10) {
-        if (isEffectActive) {
-          wgpuSyncRef.current = requestAnimationFrame(syncWgpu);
-        }
+        scheduleSync(100);
         return;
       }
+
+      if (!wgpuDirtyRef.current && !isInvoking) {
+        scheduleSync(50);
+        return;
+      }
+
+      wgpuDirtyRef.current = false;
 
       const dpr = window.devicePixelRatio || 1;
       const windowWidth = Math.max(window.innerWidth * dpr, 1);
@@ -1190,9 +1217,7 @@ export default function Editor({ onBackToLibrary, onContextMenu, transformWrappe
               isInvoking = false;
             });
         }
-        if (isEffectActive) {
-          wgpuSyncRef.current = requestAnimationFrame(syncWgpu);
-        }
+        scheduleSync(isInvoking ? 16 : 50);
         return;
       }
 
@@ -1257,17 +1282,17 @@ export default function Editor({ onBackToLibrary, onContextMenu, transformWrappe
           });
       }
 
-      if (isEffectActive) {
-        wgpuSyncRef.current = requestAnimationFrame(syncWgpu);
-      }
+      scheduleSync(isInvoking ? 16 : 50);
     };
 
-    wgpuSyncRef.current = requestAnimationFrame(syncWgpu);
+    wgpuSyncRef.current = window.setTimeout(syncWgpu, 16);
 
     return () => {
       isEffectActive = false;
+      window.removeEventListener('resize', markWgpuDirty);
+      document.removeEventListener('visibilitychange', markWgpuDirty);
       if (wgpuSyncRef.current !== null) {
-        cancelAnimationFrame(wgpuSyncRef.current);
+        clearTimeout(wgpuSyncRef.current);
       }
     };
   }, []);
@@ -1909,6 +1934,21 @@ export default function Editor({ onBackToLibrary, onContextMenu, transformWrappe
     [selectedImage, adjustments.orientationSteps, setAdjustments, liveRotation],
   );
 
+  const handleCropRotationPreview = useCallback(
+    (rotation: number | null) => {
+      setEditor({ liveRotation: rotation, isRotationActive: rotation !== null });
+    },
+    [setEditor],
+  );
+
+  const handleCropRotationCommit = useCallback(
+    (rotation: number) => {
+      setEditor({ liveRotation: null, isRotationActive: false });
+      setAdjustments((prev: Adjustments) => ({ ...prev, rotation }));
+    },
+    [setAdjustments, setEditor],
+  );
+
   if (!selectedImage) {
     return null;
   }
@@ -2030,6 +2070,8 @@ export default function Editor({ onBackToLibrary, onContextMenu, transformWrappe
             onLiveMaskPreview={handleLiveMaskPreview}
             onManualCleanup={handleManualCleanup}
             onQuickErase={handleQuickErase}
+            onRotateCommit={handleCropRotationCommit}
+            onRotatePreview={handleCropRotationPreview}
             onSelectAiSubMask={(id) => setEditor({ activeAiSubMaskId: id })}
             onSelectMask={(id) => setEditor({ activeMaskId: id })}
             onStraighten={handleStraighten}

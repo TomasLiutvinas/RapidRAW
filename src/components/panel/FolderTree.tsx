@@ -449,6 +449,8 @@ function TreeNode({
   const hasChildren = node.hasSubdirs || (node.children && node.children.length > 0);
   const isSelected = node.path === selectedPath;
   const isPinned = pinnedFolders.includes(node.path);
+  const childCount = node.children?.length || 0;
+  const shouldAnimateChildren = !isInstantTransition && childCount < 24;
 
   const handleFolderIconClick = (e: any) => {
     e.stopPropagation();
@@ -558,24 +560,25 @@ function TreeNode({
       <AnimatePresence initial={false}>
         {hasChildren && isExpanded && node.children && node.children.length > 0 && (
           <motion.div
-            animate="open"
+            animate={shouldAnimateChildren ? 'open' : { height: 'auto', opacity: 1 }}
             className="pl-1 border-l-[1.5px] border-border-color/50 ml-3.75 overflow-hidden"
             exit="closed"
-            initial={isInstantTransition ? 'open' : 'closed'}
+            initial={shouldAnimateChildren ? 'closed' : 'open'}
             key="children-container"
-            variants={containerVariants}
+            transition={shouldAnimateChildren ? undefined : { duration: 0 }}
+            variants={shouldAnimateChildren ? containerVariants : undefined}
           >
             <div className="py-1">
               <AnimatePresence>
                 {node?.children?.map((childNode: any, index: number) => (
                   <motion.div
-                    animate="visible"
+                    animate={shouldAnimateChildren ? 'visible' : undefined}
                     custom={{ index, total: node.children.length }}
-                    exit="exit"
-                    initial={isInstantTransition ? 'visible' : 'hidden'}
+                    exit={shouldAnimateChildren ? 'exit' : undefined}
+                    initial={shouldAnimateChildren ? 'hidden' : false}
                     key={childNode.path}
-                    layout={isInstantTransition ? false : 'position'}
-                    variants={itemVariants}
+                    layout={shouldAnimateChildren ? 'position' : false}
+                    variants={shouldAnimateChildren ? itemVariants : undefined}
                   >
                     <TreeNode
                       expandedFolders={expandedFolders}

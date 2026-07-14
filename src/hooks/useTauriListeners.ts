@@ -67,7 +67,7 @@ export function useTauriListeners({
 
     const scheduleFlush = () => {
       if (flushHandle.current !== null) return;
-      flushHandle.current = requestAnimationFrame(flushThumbnailBatch);
+      flushHandle.current = window.setTimeout(flushThumbnailBatch, 100);
     };
 
     const listeners = [
@@ -352,7 +352,7 @@ export function useTauriListeners({
     return () => {
       isEffectActive = false;
       if (flushHandle.current !== null) {
-        cancelAnimationFrame(flushHandle.current);
+        clearTimeout(flushHandle.current);
         flushHandle.current = null;
       }
       thumbnailBuffer.current = {};

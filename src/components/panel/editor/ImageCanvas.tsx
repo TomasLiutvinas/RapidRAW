@@ -56,6 +56,8 @@ interface ImageCanvasProps {
   onSelectAiPatchContainer?: (id: string | null) => void;
   onSelectMaskContainer?: (id: string | null) => void;
   onStraighten(val: number): void;
+  onRotatePreview?(val: number | null): void;
+  onRotateCommit?(val: number): void;
   selectedImage: SelectedImage;
   setCrop(crop: Crop, perfentCrop: PercentCrop): void;
   setIsMaskHovered(isHovered: boolean): void;
@@ -1166,6 +1168,8 @@ const ImageCanvas = memo(
     onSelectAiPatchContainer,
     onSelectMaskContainer,
     onStraighten,
+    onRotatePreview,
+    onRotateCommit,
     selectedImage,
     setCrop,
     setIsMaskHovered,
@@ -1195,6 +1199,13 @@ const ImageCanvas = memo(
     const isDrawing = useRef(false);
     const drawingStageRef = useRef<any>(null);
     const dragStartPointer = useRef<Coord | null>(null);
+    const rotationDragRef = useRef<{
+      centerX: number;
+      centerY: number;
+      latestRotation: number;
+      startPointerAngle: number;
+      startRotation: number;
+    } | null>(null);
     const lastBrushPoint = useRef<Coord | null>(null);
     const currentLine = useRef<DrawnLine | null>(null);
     const previewBoxRef = useRef<{ start: Coord; end: Coord } | null>(null);
@@ -2546,6 +2557,107 @@ const ImageCanvas = memo(
       return `rotate(${rotation}deg)`;
     }, [adjustments.rotation, liveRotation]);
 
+    const clampFineRotation = useCallback((value: number) => Math.max(-45, Math.min(45, value)), []);
+
+    const normalizeAngleDelta = useCallback((value: number) => {
+      let normalized = value;
+      while (normalized > 180) normalized -= 360;
+      while (normalized < -180) normalized += 360;
+      return normalized;
+    }, []);
+
+    const handleOutsideCropRotationPointerDown = useCallback(
+      (event: React.PointerEvent<HTMLDivElement>) => {
+        const imageRect = cropImageRef.current?.getBoundingClientRect();
+        if (!imageRect || isStraightenActive) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        event.currentTarget.setPointerCapture(event.pointerId);
+
+        const centerX = imageRect.left + imageRect.width / 2;
+        const centerY = imageRect.top + imageRect.height / 2;
+        const startPointerAngle = (Math.atan2(event.clientY - centerY, event.clientX - centerX) * 180) / Math.PI;
+        const startRotation = liveRotation ?? adjustments.rotation ?? 0;
+
+        rotationDragRef.current = {
+          centerX,
+          centerY,
+          latestRotation: startRotation,
+          startPointerAngle,
+          startRotation,
+        };
+        onRotatePreview?.(startRotation);
+      },
+      [adjustments.rotation, isStraightenActive, liveRotation, onRotatePreview],
+    );
+
+    const handleOutsideCropRotationPointerMove = useCallback(
+      (event: React.PointerEvent<HTMLDivElement>) => {
+        const drag = rotationDragRef.current;
+        if (!drag) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const pointerAngle = (Math.atan2(event.clientY - drag.centerY, event.clientX - drag.centerX) * 180) / Math.PI;
+        const angleDelta = normalizeAngleDelta(pointerAngle - drag.startPointerAngle);
+        const nextRotation = clampFineRotation(drag.startRotation + angleDelta);
+        drag.latestRotation = nextRotation;
+        onRotatePreview?.(nextRotation);
+      },
+      [clampFineRotation, normalizeAngleDelta, onRotatePreview],
+    );
+
+    const finishOutsideCropRotationDrag = useCallback(
+      (event: React.PointerEvent<HTMLDivElement>) => {
+        const drag = rotationDragRef.current;
+        if (!drag) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        rotationDragRef.current = null;
+        onRotateCommit?.(drag.latestRotation);
+      },
+      [onRotateCommit],
+    );
+
+    const outsideCropRotationZones = useMemo(() => {
+      if (
+        !isCropping ||
+        isStraightenActive ||
+        !crop ||
+        !uncroppedImageRenderSize ||
+        !uncroppedImageRenderSize.width ||
+        !uncroppedImageRenderSize.height
+      ) {
+        return [];
+      }
+
+      const renderWidth = uncroppedImageRenderSize.width;
+      const renderHeight = uncroppedImageRenderSize.height;
+      const left = crop.unit === '%' ? (crop.x / 100) * renderWidth : crop.x;
+      const top = crop.unit === '%' ? (crop.y / 100) * renderHeight : crop.y;
+      const width = crop.unit === '%' ? (crop.width / 100) * renderWidth : crop.width;
+      const height = crop.unit === '%' ? (crop.height / 100) * renderHeight : crop.height;
+      const margin = 44;
+      const right = left + width;
+      const bottom = top + height;
+
+      return [
+        { key: 'top', left: -margin, top: -margin, width: renderWidth + margin * 2, height: top + margin },
+        {
+          key: 'bottom',
+          left: -margin,
+          top: bottom,
+          width: renderWidth + margin * 2,
+          height: renderHeight - bottom + margin,
+        },
+        { key: 'left', left: -margin, top, width: left + margin, height },
+        { key: 'right', left: right, top, width: renderWidth - right + margin, height },
+      ].filter((zone) => zone.width > 0 && zone.height > 0);
+    }, [crop, isCropping, isStraightenActive, uncroppedImageRenderSize]);
+
     const getCropDimensions = () => {
       if (!crop || !uncroppedImageRenderSize?.width || !uncroppedImageRenderSize?.height) {
         return { width: 0, height: 0 };
@@ -3007,6 +3119,26 @@ const ImageCanvas = memo(
                   }}
                 />
               </ReactCrop>
+
+              {outsideCropRotationZones.map((zone) => (
+                <div
+                  key={zone.key}
+                  className="absolute z-20"
+                  style={{
+                    height: zone.height,
+                    left: zone.left,
+                    top: zone.top,
+                    width: zone.width,
+                    cursor: rotationDragRef.current ? 'grabbing' : 'grab',
+                    touchAction: 'none',
+                  }}
+                  onPointerDown={handleOutsideCropRotationPointerDown}
+                  onPointerMove={handleOutsideCropRotationPointerMove}
+                  onPointerUp={finishOutsideCropRotationDrag}
+                  onPointerCancel={finishOutsideCropRotationDrag}
+                  aria-label="Drag outside crop to rotate"
+                />
+              ))}
 
               {isStraightenActive && (
                 <Stage

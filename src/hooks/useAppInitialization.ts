@@ -198,10 +198,24 @@ export const useAppInitialization = ({
         if (!isAndroid && rootFolders.length > 0) {
           const currentPath = settings.lastFolderState?.currentFolderPath || rootFolders[0];
           const isAlbum = currentPath.startsWith('Album: ');
+          const restoredLibraryViewMode = settings.libraryViewMode ?? defaultLibraryViewMode;
           const command =
-            settings.libraryViewMode === LibraryViewMode.Recursive
+            restoredLibraryViewMode === LibraryViewMode.Recursive
               ? Invokes.ListImagesRecursive
               : Invokes.ListImagesInDir;
+          const imagesPromise = isAlbum
+            ? undefined
+            : invoke(command, { path: currentPath }).then(async (files: any) => {
+                if (
+                  restoredLibraryViewMode !== LibraryViewMode.Recursive &&
+                  Array.isArray(files) &&
+                  files.length === 0
+                ) {
+                  const recursiveFiles = await invoke(Invokes.ListImagesRecursive, { path: currentPath });
+                  if (Array.isArray(recursiveFiles) && recursiveFiles.length > 0) return recursiveFiles;
+                }
+                return files;
+              });
 
           preloadedDataRef.current = {
             rootPaths: rootFolders,
@@ -211,7 +225,7 @@ export const useAppInitialization = ({
               expandedFolders: settings.lastFolderState?.expandedFolders ?? rootFolders,
               showImageCounts: settings.enableFolderImageCounts || settings.folderTreeSort?.key === 'imageCount',
             }),
-            images: isAlbum ? undefined : invoke(command, { path: currentPath }),
+            images: imagesPromise,
           };
         }
 

@@ -717,6 +717,7 @@ const RowComponent = ({
   columnWidths,
   queueThumbnailRequest,
   onToggleRecursiveFolder,
+  onSelectRecursiveFolder,
 }: any) => {
   const { t } = useTranslation();
   const row = rows[index];
@@ -728,7 +729,9 @@ const RowComponent = ({
       queueThumbnailRequest(img.path);
     });
 
-    const cloudPaths = row.images.filter((img: ImageFile) => img.is_cloud_placeholder).map((img: ImageFile) => img.path);
+    const cloudPaths = row.images
+      .filter((img: ImageFile) => img.is_cloud_placeholder)
+      .map((img: ImageFile) => img.path);
     if (cloudPaths.length === 0) return;
 
     const interval = setInterval(() => {
@@ -781,9 +784,19 @@ const RowComponent = ({
           >
             {row.isExpanded ? <FolderOpen size={16} /> : <Folder size={16} />}
           </button>
-          <Text variant={TextVariants.label} weight={TextWeights.semibold} className="truncate" data-tooltip={row.path}>
-            {displayPath}
-          </Text>
+          <button
+            type="button"
+            className="min-w-0 flex-1 truncate text-left rounded px-1 py-0.5 transition-colors hover:bg-surface-hover"
+            onClick={(event) => {
+              event.stopPropagation();
+              onSelectRecursiveFolder(row.images || []);
+            }}
+            data-tooltip={row.path}
+          >
+            <Text variant={TextVariants.label} weight={TextWeights.semibold} className="truncate">
+              {displayPath}
+            </Text>
+          </button>
           <Text variant={TextVariants.small} color={TextColors.secondary} className="ml-auto">
             {t('library.items.imagesCount', { count: row.count })}
           </Text>

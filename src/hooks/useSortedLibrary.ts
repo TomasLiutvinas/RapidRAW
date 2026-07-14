@@ -36,7 +36,7 @@ export const parseFocalLength = (val: string | undefined): number => {
 
 export function computeSortedLibrary(libraryState: any, settingsState: any): ImageFile[] {
   const { imageList, imageRatings, filterCriteria, searchCriteria, sortCriteria } = libraryState;
-  const { appSettings, supportedTypes } = settingsState;
+  const { supportedTypes } = settingsState;
 
   const getParentDir = (filePath: string): string => {
     const separator = filePath.includes('/') ? '/' : '\\';
@@ -287,15 +287,14 @@ export function useSortedLibrary() {
   const searchCriteria = useLibraryStore((state) => state.searchCriteria);
   const sortCriteria = useLibraryStore((state) => state.sortCriteria);
 
-  const appSettings = useSettingsStore((state) => state.appSettings);
   const supportedTypes = useSettingsStore((state) => state.supportedTypes);
 
   const sortedImageList = useMemo(() => {
     return computeSortedLibrary(
       { imageList, imageRatings, filterCriteria, searchCriteria, sortCriteria },
-      { appSettings, supportedTypes },
+      { supportedTypes },
     );
-  }, [imageList, sortCriteria, imageRatings, filterCriteria, supportedTypes, searchCriteria, appSettings]);
+  }, [imageList, sortCriteria, imageRatings, filterCriteria, supportedTypes, searchCriteria]);
 
   return sortedImageList;
 }

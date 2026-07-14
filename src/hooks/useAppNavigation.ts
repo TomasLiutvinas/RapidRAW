@@ -271,6 +271,7 @@ export function useAppNavigation({ clearThumbnailQueue, refs }: AppNavigationPro
       const { setProcess } = useProcessStore.getState();
       const { selectedImage, resetHistory, setEditor } = useEditorStore.getState();
       const libraryViewMode = appSettings?.libraryViewMode;
+      let didFinishLoading = false;
 
       if (!preserveEditor) {
         await invoke('cancel_thumbnail_generation');
@@ -329,14 +330,20 @@ export function useAppNavigation({ clearThumbnailQueue, refs }: AppNavigationPro
           useEditorStore.getState().patchesSentToBackend.clear();
         }
 
-        const command =
-          libraryViewMode === LibraryViewMode.Recursive ? Invokes.ListImagesRecursive : Invokes.ListImagesInDir;
-
         let files: ImageFile[];
         if (preloadedImages) {
           files = preloadedImages;
         } else {
+          const command =
+            libraryViewMode === LibraryViewMode.Recursive ? Invokes.ListImagesRecursive : Invokes.ListImagesInDir;
           files = await invoke(command, { path });
+
+          if (libraryViewMode !== LibraryViewMode.Recursive && path && files.length === 0) {
+            const recursiveFiles: ImageFile[] = await invoke(Invokes.ListImagesRecursive, { path });
+            if (recursiveFiles.length > 0) {
+              files = recursiveFiles;
+            }
+          }
         }
 
         const initialRatings: Record<string, number> = {};
@@ -345,8 +352,6 @@ export function useAppNavigation({ clearThumbnailQueue, refs }: AppNavigationPro
             initialRatings[f.path] = f.rating;
           }
         });
-        setLibrary({ imageRatings: initialRatings });
-
         const exifSortKeys = ['date_taken', 'iso', 'shutter_speed', 'aperture', 'focal_length'];
         const isExifSortActive = exifSortKeys.includes(sortCriteria.key);
 
@@ -359,9 +364,11 @@ export function useAppNavigation({ clearThumbnailQueue, refs }: AppNavigationPro
               ...image,
               exif: exifDataMap[image.path] || image.exif || null,
             }));
-            setLibrary({ imageList: finalImageList });
+            setLibrary({ imageRatings: initialRatings, imageList: finalImageList, isViewLoading: false });
+            didFinishLoading = true;
           } else {
-            setLibrary({ imageList: files });
+            setLibrary({ imageRatings: initialRatings, imageList: files, isViewLoading: false });
+            didFinishLoading = true;
             invoke(Invokes.ReadExifForPaths, { paths })
               .then((exifDataMap: any) => {
                 setLibrary((state) => ({
@@ -376,7 +383,8 @@ export function useAppNavigation({ clearThumbnailQueue, refs }: AppNavigationPro
               });
           }
         } else {
-          setLibrary({ imageList: files });
+          setLibrary({ imageRatings: initialRatings, imageList: files, isViewLoading: false });
+          didFinishLoading = true;
         }
 
         if (!preserveEditor) {
@@ -388,7 +396,9 @@ export function useAppNavigation({ clearThumbnailQueue, refs }: AppNavigationPro
         console.error('Failed to load folder contents:', err);
         toast.error('Failed to load images from the selected folder.');
       } finally {
-        useLibraryStore.getState().setLibrary({ isViewLoading: false });
+        if (!didFinishLoading) {
+          useLibraryStore.getState().setLibrary({ isViewLoading: false });
+        }
       }
     },
     [clearThumbnailQueue, refs],
