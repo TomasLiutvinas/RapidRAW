@@ -80,6 +80,20 @@ fn compute_thumbnail_cache_hash(path_str: &str, adjustments_bytes: &[u8]) -> Opt
     Some(hasher.finalize().to_hex().to_string())
 }
 
+#[derive(Serialize)]
+pub struct ThumbnailCacheStatus {
+    pub total_count: usize,
+    pub cached_count: usize,
+    pub cached_size_bytes: u64,
+    pub total_cache_count: usize,
+    pub total_cache_size_bytes: u64,
+}
+
+fn thumbnail_cache_path_for_image(thumb_cache_dir: &Path, path: &str) -> Option<PathBuf> {
+    let cache_hash = get_cache_key_hash(path)?;
+    Some(thumb_cache_dir.join(format!("{}.jpg", cache_hash)))
+}
+
 fn resolve_image_metadata(
     image_path: &Path,
     sidecar_path: &Path,
@@ -1650,6 +1664,7 @@ pub fn update_thumbnail_queue(
     paths: Vec<String>,
     app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
+    const MAX_THUMBNAIL_QUEUE_LEN: usize = 50_000;
     let state = app_handle.state::<crate::AppState>();
 
     let mut queue = state.thumbnail_manager.queue.lock().unwrap();
@@ -1679,7 +1694,7 @@ pub fn update_thumbnail_queue(
 
     queue.retain(|p| !seen.contains(p));
 
-    while queue.len() + unique_paths.len() > 500 {
+    while queue.len() + unique_paths.len() > MAX_THUMBNAIL_QUEUE_LEN && !queue.is_empty() {
         queue.pop_front();
     }
 
@@ -2944,6 +2959,59 @@ pub fn clear_thumbnail_cache(app_handle: AppHandle) -> Result<(), String> {
         .map_err(|e| format!("Failed to recreate thumbnail cache directory: {}", e))?;
 
     Ok(())
+}
+
+#[tauri::command]
+pub fn get_thumbnail_cache_status(
+    paths: Vec<String>,
+    app_handle: AppHandle,
+) -> Result<ThumbnailCacheStatus, String> {
+    let thumb_cache_dir = get_thumb_cache_dir(&app_handle)?;
+
+    let mut total_cache_count = 0usize;
+    let mut total_cache_size_bytes = 0u64;
+
+    if let Ok(entries) = fs::read_dir(&thumb_cache_dir) {
+        for entry in entries.filter_map(Result::ok) {
+            let path = entry.path();
+            if path.extension().and_then(|ext| ext.to_str()) != Some("jpg") {
+                continue;
+            }
+            if let Ok(metadata) = entry.metadata()
+                && metadata.is_file()
+            {
+                total_cache_count += 1;
+                total_cache_size_bytes += metadata.len();
+            }
+        }
+    }
+
+    let unique_paths: HashSet<String> = paths.into_iter().collect();
+    let mut cached_count = 0usize;
+    let mut cached_size_bytes = 0u64;
+    let mut counted_cache_files = HashSet::new();
+
+    for path in &unique_paths {
+        if let Some(cache_path) = thumbnail_cache_path_for_image(&thumb_cache_dir, path)
+            && cache_path.exists()
+        {
+            cached_count += 1;
+            if counted_cache_files.insert(cache_path.clone())
+                && let Ok(metadata) = fs::metadata(&cache_path)
+                && metadata.is_file()
+            {
+                cached_size_bytes += metadata.len();
+            }
+        }
+    }
+
+    Ok(ThumbnailCacheStatus {
+        total_count: unique_paths.len(),
+        cached_count,
+        cached_size_bytes,
+        total_cache_count,
+        total_cache_size_bytes,
+    })
 }
 
 #[tauri::command]

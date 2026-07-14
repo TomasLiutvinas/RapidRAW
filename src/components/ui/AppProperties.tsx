@@ -66,6 +66,7 @@ export enum Invokes {
   GetOrCreateInternalLibraryRoot = 'get_or_create_internal_library_root',
   GetPinnedFolderTrees = 'get_pinned_folder_trees',
   GetSupportedFileTypes = 'get_supported_file_types',
+  GetThumbnailCacheStatus = 'get_thumbnail_cache_status',
   HandleExportPresetsToFile = 'handle_export_presets_to_file',
   HandleImportPresetsFromFile = 'handle_import_presets_from_file',
   HandleImportLegacyPresetsFromFile = 'handle_import_legacy_presets_from_file',

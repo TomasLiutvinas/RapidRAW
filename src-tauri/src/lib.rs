@@ -2370,6 +2370,7 @@ pub fn run() {
             file_management::save_community_preset,
             file_management::clear_all_sidecars,
             file_management::clear_thumbnail_cache,
+            file_management::get_thumbnail_cache_status,
             file_management::set_color_label_for_paths,
             file_management::set_rating_for_paths,
             file_management::import_files,

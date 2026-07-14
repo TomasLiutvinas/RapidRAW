@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { getVersion } from '@tauri-apps/api/app';
+import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-shell';
 import {
   AlertTriangle,
@@ -13,6 +14,7 @@ import {
   Search,
   Users,
   SlidersHorizontal,
+  HardDrive,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -28,6 +30,7 @@ import {
   ThumbnailAspectRatio,
   RawStatus,
   EditedStatus,
+  Invokes,
 } from '../ui/AppProperties';
 import { ImportState, Status } from '../ui/ExportImportProperties';
 import Text from '../ui/Text';
@@ -87,6 +90,26 @@ export interface ColumnWidths {
   focal: number;
 }
 
+interface ThumbnailCacheStatus {
+  total_count: number;
+  cached_count: number;
+  cached_size_bytes: number;
+  total_cache_count: number;
+  total_cache_size_bytes: number;
+}
+
+const formatBytes = (bytes: number) => {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let value = bytes;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+  return `${value >= 10 || unitIndex === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`;
+};
+
 export default function MainLibrary(props: MainLibraryProps) {
   const { t } = useTranslation();
   const [showSettings, setShowSettings] = useState(false);
@@ -95,6 +118,9 @@ export default function MainLibrary(props: MainLibraryProps) {
   const [latestVersion, setLatestVersion] = useState('');
   const [isBusyDelayed, setIsBusyDelayed] = useState(false);
   const [isProgressHovered, setIsProgressHovered] = useState(false);
+  const [cacheStatus, setCacheStatus] = useState<ThumbnailCacheStatus | null>(null);
+  const [isCacheStatusLoading, setIsCacheStatusLoading] = useState(false);
+  const [isPreCaching, setIsPreCaching] = useState(false);
 
   const searchCriteria = useLibraryStore((state) => state.searchCriteria);
 
@@ -221,6 +247,44 @@ export default function MainLibrary(props: MainLibraryProps) {
 
     checkVersion();
   }, []);
+
+  const refreshCacheStatus = useCallback(async () => {
+    const paths = props.imageList.map((image) => image.path);
+    if (paths.length === 0) {
+      setCacheStatus(null);
+      setIsPreCaching(false);
+      return;
+    }
+
+    setIsCacheStatusLoading(true);
+    try {
+      const status = await invoke<ThumbnailCacheStatus>(Invokes.GetThumbnailCacheStatus, { paths });
+      setCacheStatus(status);
+      if (status.cached_count >= status.total_count) {
+        setIsPreCaching(false);
+      }
+    } catch (error) {
+      console.error('Failed to read thumbnail cache status:', error);
+    } finally {
+      setIsCacheStatusLoading(false);
+    }
+  }, [props.imageList]);
+
+  useEffect(() => {
+    refreshCacheStatus();
+  }, [refreshCacheStatus]);
+
+  useEffect(() => {
+    if ((props.thumbnailProgress?.total ?? 0) === 0) {
+      refreshCacheStatus();
+    }
+  }, [props.thumbnailProgress?.total, refreshCacheStatus]);
+
+  const handlePreCacheAll = useCallback(() => {
+    if (!props.onRequestThumbnails || props.imageList.length === 0) return;
+    setIsPreCaching(true);
+    props.onRequestThumbnails(props.imageList.map((image) => image.path));
+  }, [props.imageList, props.onRequestThumbnails]);
 
   if (!props.rootPaths || props.rootPaths.length === 0) {
     if (!props.appSettings) {
@@ -469,6 +533,49 @@ export default function MainLibrary(props: MainLibraryProps) {
               <AlertTriangle size={16} />
               <span>{t('library.import.failed')}</span>
             </Text>
+          )}
+          {props.imageList.length > 0 && cacheStatus && (
+            <div
+              className="hidden xl:flex items-center gap-2 rounded-lg bg-surface px-3 py-2 min-h-12"
+              data-tooltip={`Loaded thumbnails cached: ${cacheStatus.cached_count}/${cacheStatus.total_count} (${formatBytes(
+                cacheStatus.cached_size_bytes,
+              )}). Total thumbnail cache: ${cacheStatus.total_cache_count} files, ${formatBytes(
+                cacheStatus.total_cache_size_bytes,
+              )}.`}
+            >
+              <HardDrive size={16} className="text-text-secondary shrink-0" />
+              <div className="leading-tight whitespace-nowrap">
+                <Text as="div" variant={TextVariants.small} weight={TextWeights.semibold} color={TextColors.primary}>
+                  {cacheStatus.cached_count}/{cacheStatus.total_count} cached
+                </Text>
+                <Text as="div" variant={TextVariants.small} color={TextColors.secondary}>
+                  {formatBytes(cacheStatus.cached_size_bytes)} loaded ·{' '}
+                  {formatBytes(cacheStatus.total_cache_size_bytes)} total
+                </Text>
+              </div>
+              <button
+                type="button"
+                className="ml-1 rounded-md px-2 py-1 text-xs font-semibold text-text-primary bg-bg-primary hover:bg-card-active disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handlePreCacheAll}
+                disabled={
+                  isCacheStatusLoading ||
+                  isPreCaching ||
+                  !props.onRequestThumbnails ||
+                  cacheStatus.cached_count >= cacheStatus.total_count
+                }
+              >
+                {isPreCaching || (props.thumbnailProgress?.total ?? 0) > 0 ? 'Caching…' : 'Cache all'}
+              </button>
+              <button
+                type="button"
+                className="rounded-md p-1 text-text-secondary hover:bg-card-active hover:text-text-primary disabled:opacity-50"
+                onClick={refreshCacheStatus}
+                disabled={isCacheStatusLoading}
+                data-tooltip="Refresh cache status"
+              >
+                <RefreshCw size={14} className={isCacheStatusLoading ? 'animate-spin' : ''} />
+              </button>
+            </div>
           )}
           <SearchInput indexingProgress={props.indexingProgress} isIndexing={props.isIndexing} />
           <ViewOptionsDropdown
