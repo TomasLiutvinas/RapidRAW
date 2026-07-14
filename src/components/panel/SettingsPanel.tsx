@@ -1842,7 +1842,7 @@ export default function SettingsPanel({
                       <Slider
                         label={t('settings.processing.threads')}
                         min={2}
-                        max={10}
+                        max={16}
                         step={1}
                         value={processingSettings.thumbnailWorkerThreads}
                         defaultValue={4}
@@ -1860,7 +1860,7 @@ export default function SettingsPanel({
                       <Slider
                         label={t('settings.processing.images')}
                         min={2}
-                        max={10}
+                        max={20}
                         step={1}
                         value={processingSettings.imageCacheSize}
                         defaultValue={5}

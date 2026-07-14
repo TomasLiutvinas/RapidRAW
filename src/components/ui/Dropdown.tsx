@@ -119,7 +119,7 @@ const Dropdown = <T extends React.Key>({
           {selectedOption ? selectedOption.label : placeholder}
         </Text>
         <ChevronDown
-          className={`${TEXT_COLOR_KEYS[TextColors.secondary]} transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+          className={`${TEXT_COLOR_KEYS[TextColors.secondary]} transition-transform duration-100 ${isOpen ? 'rotate-180' : ''}`}
           size={20}
         />
       </button>
@@ -131,11 +131,11 @@ const Dropdown = <T extends React.Key>({
             className="absolute right-0 mt-2 w-full origin-top-right z-20"
             exit={{ opacity: 0, scale: 0.95 }}
             initial={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.1, ease: 'easeOut' }}
+            transition={{ duration: 0.08, ease: 'easeOut' }}
           >
             <div
               aria-orientation="vertical"
-              className="bg-surface/95 backdrop-blur-md rounded-lg shadow-xl p-2 max-h-80 overflow-y-auto"
+              className="bg-surface rounded-lg shadow-xl p-2 max-h-80 overflow-y-auto"
               role="listbox"
             >
               {showSearch && (

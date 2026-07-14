@@ -5,7 +5,7 @@ import clsx from 'clsx';
 import Text from './Text';
 import { TextColors, TextVariants, TextWeights } from '../../types/typography';
 
-const TOOLTIP_DELAY = 500;
+const TOOLTIP_DELAY = 300;
 const OFFSET = 8;
 const TOOLTIP_VIEWPORT_MARGIN = 12;
 
@@ -23,7 +23,7 @@ export default function GlobalTooltip() {
   const [leftOverride, setLeftOverride] = useState<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const targetRef = useRef<HTMLElement | null>(null);
-  const rafRef = useRef<number>(0);
+  const watchIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -35,9 +35,9 @@ export default function GlobalTooltip() {
     };
 
     const stopWatch = () => {
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = 0;
+      if (watchIntervalRef.current !== null) {
+        clearInterval(watchIntervalRef.current);
+        watchIntervalRef.current = null;
       }
     };
 
@@ -66,15 +66,13 @@ export default function GlobalTooltip() {
     };
 
     const watchTarget = () => {
-      const tick = () => {
+      stopWatch();
+      watchIntervalRef.current = setInterval(() => {
         const el = targetRef.current;
         if (!el || !document.contains(el) || !el.getAttribute('data-tooltip')) {
           hide();
-          return;
         }
-        rafRef.current = requestAnimationFrame(tick);
-      };
-      rafRef.current = requestAnimationFrame(tick);
+      }, 250);
     };
 
     const handleMouseOver = (e: MouseEvent) => {
@@ -167,7 +165,7 @@ export default function GlobalTooltip() {
     }
   }, [tooltip, leftOverride]);
 
-  const left = leftOverride !== null ? leftOverride : tooltip?.centerX ?? 0;
+  const left = leftOverride !== null ? leftOverride : (tooltip?.centerX ?? 0);
 
   return createPortal(
     <AnimatePresence mode="wait">
@@ -182,7 +180,7 @@ export default function GlobalTooltip() {
           style={{ top: tooltip.y, left }}
           className={clsx(
             'fixed z-100 pointer-events-none',
-            'bg-surface/80 backdrop-blur-xs',
+            'bg-surface/95',
             'border border-text-secondary/10 shadow-xl rounded-md',
             'px-2.5 py-1.5 whitespace-nowrap',
             tooltip.isAbove && '-translate-y-full',

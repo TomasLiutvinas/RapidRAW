@@ -131,10 +131,7 @@ function SubMenu({ cancelCloseSubmenu, closeSubmenu, hideContextMenu, options, p
         style={style}
         transition={{ duration: 0.1, ease: 'easeOut' }}
       >
-        <div
-          className={clsx('backdrop-blur-md rounded-lg shadow-xl', !CustomComponent && 'bg-surface/95 p-2 w-56')}
-          role="menu"
-        >
+        <div className={clsx('rounded-lg shadow-xl', !CustomComponent && 'bg-surface p-2 w-56')} role="menu">
           {CustomComponent && customOption ? (
             <CustomComponent {...customOption.customProps} hideContextMenu={hideContextMenu} />
           ) : (
@@ -176,7 +173,7 @@ function MenuItem({ option, path, hideContextMenu }: MenuItemProps) {
         const parentPath = path.slice(0, -1);
         openSubmenu(parentPath.length > 0 ? parentPath : null);
       }
-    }, 150);
+    }, 80);
   };
 
   const handleMouseLeave = () => {
@@ -266,7 +263,7 @@ function ContextMenu() {
           style={{ top: y, left: x }}
           transition={{ duration: 0.1, ease: 'easeOut' }}
         >
-          <div className="bg-surface/95 backdrop-blur-md rounded-lg shadow-xl p-2 w-64" role="menu">
+          <div className="bg-surface rounded-lg shadow-xl p-2 w-64" role="menu">
             {options.map((option: any, index: number) => (
               <MenuItem hideContextMenu={hideContextMenu} key={index} option={option} path={[index]} />
             ))}
@@ -315,7 +312,7 @@ export function ContextMenuProvider({ children }: ContextMenuProviderProps) {
         }
         return currentActivePath;
       });
-    }, 200);
+    }, 100);
   }, []);
 
   const cancelCloseSubmenu = useCallback(() => {

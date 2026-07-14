@@ -62,7 +62,7 @@ export default function CollapsibleSection({
     }
     hoverTimeoutRef.current = setTimeout(() => {
       setIsHovering(true);
-    }, 250);
+    }, 100);
   };
 
   const handleMouseLeave = () => {
