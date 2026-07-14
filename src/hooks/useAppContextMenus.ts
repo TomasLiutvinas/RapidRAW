@@ -30,6 +30,7 @@ import {
   Gauge,
   Grip,
   Film,
+  ZoomIn,
   Home,
   Plane,
   Mountain,
@@ -73,8 +74,13 @@ export function useAppContextMenus(props: UseAppContextMenusProps) {
   const { t } = useTranslation();
   const { showContextMenu } = useContextMenu();
 
-  const { handleAutoAdjustments, handleResetAdjustments, handleCopyAdjustments, handlePasteAdjustments } =
-    useEditorActions();
+  const {
+    handleAutoAdjustments,
+    handleResetAdjustments,
+    handleCopyAdjustments,
+    handlePasteAdjustments,
+    handleZoomChange,
+  } = useEditorActions();
   const { handleRate, handleSetColorLabel, handleTagsChanged } = useLibraryActions();
 
   const albumIcons = useMemo(
@@ -177,6 +183,11 @@ export function useAppContextMenus(props: UseAppContextMenusProps) {
           label: t('contextMenus.editor.exportImage'),
           icon: FileInput,
           onClick: () => setRightPanel(Panel.Export),
+        },
+        {
+          label: t('contextMenus.editor.zoom100', 'Zoom to 100%'),
+          icon: ZoomIn,
+          onClick: () => handleZoomChange(1.0),
         },
         { type: OPTION_SEPARATOR },
         { label: t('contextMenus.editor.undo'), icon: Undo, onClick: undo, disabled: !canUndo },
@@ -291,14 +302,12 @@ export function useAppContextMenus(props: UseAppContextMenusProps) {
               icon: Check,
               isDestructive: true,
               onClick: () => {
-                const originalAspectRatio =
-                  selectedImage.width && selectedImage.height ? selectedImage.width / selectedImage.height : null;
                 resetHistory({
                   ...INITIAL_ADJUSTMENTS,
-                  aspectRatio: originalAspectRatio,
+                  aspectRatio: null,
                   aiPatches: [],
                 });
-                setEditor({ adjustments: { ...INITIAL_ADJUSTMENTS, aspectRatio: originalAspectRatio, aiPatches: [] } });
+                setEditor({ adjustments: { ...INITIAL_ADJUSTMENTS, aspectRatio: null, aiPatches: [] } });
               },
             },
           ],
@@ -311,6 +320,7 @@ export function useAppContextMenus(props: UseAppContextMenusProps) {
       handleCopyAdjustments,
       handlePasteAdjustments,
       handleAutoAdjustments,
+      handleZoomChange,
       handleRate,
       handleSetColorLabel,
       handleTagsChanged,
