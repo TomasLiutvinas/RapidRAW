@@ -386,6 +386,25 @@ export function formatKeyCode(key: string, osPlatform: string): string {
   return label || key;
 }
 
+export function getShortcutLabel(
+  action: string,
+  keybinds: { [action: string]: string[] } | undefined,
+  osPlatform: string,
+): string | null {
+  const def = KEYBIND_DEFINITIONS.find((entry) => entry.action === action);
+  if (!def) return null;
+
+  const userCombo = keybinds?.[action];
+  const combo = userCombo && userCombo.length > 0 ? userCombo : def.defaultCombo;
+  if (!combo || combo.length === 0) return null;
+
+  return combo.map((key) => formatKeyCode(key, osPlatform)).join(' + ');
+}
+
+export function appendShortcutToTooltip(tooltip: string, shortcut: string | null): string {
+  return shortcut ? `${tooltip} (${shortcut})` : tooltip;
+}
+
 export function arraysEqual(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((v, i) => v === b[i]);
 }

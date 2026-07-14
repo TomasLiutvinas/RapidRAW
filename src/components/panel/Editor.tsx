@@ -634,7 +634,7 @@ export default function Editor({ onBackToLibrary, onContextMenu, onImageSelect, 
       let zoomSpeedMult = appSettings?.zoomSpeedMultiplier ?? 1.0;
 
       if (isTrackpad) {
-        zoomSpeedMult *= 5;
+        zoomSpeedMult *= 1.5;
       }
 
       const isZoomIntent = isPinch || (!isTrackpad && !e.shiftKey && !e.altKey);
@@ -644,8 +644,12 @@ export default function Editor({ onBackToLibrary, onContextMenu, onImageSelect, 
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
 
-        const delta = e.deltaY !== 0 ? e.deltaY : e.deltaX;
-        const zoomSensitivity = 0.002 * zoomSpeedMult;
+        const rawDelta = e.deltaY !== 0 ? e.deltaY : e.deltaX;
+        const deltaModeScale = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? container.clientHeight : 1;
+        const normalizedDelta = rawDelta * deltaModeScale;
+        const maxDeltaPerEvent = isPinch || isTrackpad ? 80 : 120;
+        const delta = Math.max(-maxDeltaPerEvent, Math.min(maxDeltaPerEvent, normalizedDelta));
+        const zoomSensitivity = (isPinch || isTrackpad ? 0.0012 : 0.0006) * zoomSpeedMult;
         const exponent = delta * zoomSensitivity;
 
         let newScale = transformStateRef.current.scale * Math.exp(-exponent);
