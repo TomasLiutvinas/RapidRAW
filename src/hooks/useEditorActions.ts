@@ -144,9 +144,7 @@ export function useEditorActions() {
           if (libraryActivePath && pathsToReset.includes(libraryActivePath))
             setLibrary({ libraryActiveAdjustments: { ...INITIAL_ADJUSTMENTS } });
           if (selectedImage && pathsToReset.includes(selectedImage.path)) {
-            const aspect =
-              selectedImage.width && selectedImage.height ? selectedImage.width / selectedImage.height : null;
-            const resetData = { ...INITIAL_ADJUSTMENTS, aspectRatio: aspect, aiPatches: [] };
+            const resetData = { ...INITIAL_ADJUSTMENTS, aspectRatio: null, aiPatches: [] };
             resetHistory(resetData);
             setEditor({ adjustments: resetData });
           }
