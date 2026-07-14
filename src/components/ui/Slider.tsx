@@ -260,6 +260,12 @@ const Slider = ({
 
     const startValue = displayValue;
     const endValue = value;
+    const animationThreshold = Math.max(Math.abs(step || 0.01), 0.01);
+    if (Math.abs(endValue - startValue) <= animationThreshold) {
+      setDisplayValue(endValue);
+      return;
+    }
+
     const duration = 300;
     let startTime: number | null = null;
 

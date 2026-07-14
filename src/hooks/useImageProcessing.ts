@@ -42,6 +42,7 @@ export function useImageProcessing(
   const inFlightCountRef = useRef(0);
   const lastAnalyticsTimeRef = useRef<number>(0);
   const pendingApplyRef = useRef<{ adjustments: Adjustments; targetRes?: number } | null>(null);
+  const pipelineTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentOriginalResRef = useRef<number>(0);
   const dragIdleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeWaveformChannelRef = useRef(activeWaveformChannel);
@@ -51,6 +52,16 @@ export function useImageProcessing(
   useEffect(() => {
     selectedImagePathRef.current = selectedImage?.path ?? null;
   }, [selectedImage?.path]);
+
+  useEffect(
+    () => () => {
+      if (pipelineTimerRef.current !== null) {
+        clearTimeout(pipelineTimerRef.current);
+        pipelineTimerRef.current = null;
+      }
+    },
+    [],
+  );
 
   const geometricAdjustmentsKey = useMemo(() => {
     if (!adjustments) return '';
@@ -286,7 +297,8 @@ export function useImageProcessing(
   );
 
   const flushPipeline = useCallback(() => {
-    if (inFlightCountRef.current >= 3) return;
+    pipelineTimerRef.current = null;
+    if (inFlightCountRef.current >= 1) return;
     if (!pendingApplyRef.current) return;
 
     const { adjustments, targetRes } = pendingApplyRef.current;
@@ -297,10 +309,17 @@ export function useImageProcessing(
     executeApplyAdjustments(adjustments, true, targetRes).finally(() => {
       inFlightCountRef.current -= 1;
       if (pendingApplyRef.current) {
-        requestAnimationFrame(() => flushPipeline());
+        if (pipelineTimerRef.current === null) {
+          pipelineTimerRef.current = setTimeout(() => flushPipeline(), 50);
+        }
       }
     });
   }, [executeApplyAdjustments]);
+
+  const schedulePipelineFlush = useCallback(() => {
+    if (pipelineTimerRef.current !== null) return;
+    pipelineTimerRef.current = setTimeout(() => flushPipeline(), 50);
+  }, [flushPipeline]);
 
   const applyAdjustments = useCallback(
     (currentAdjustments: Adjustments, dragging: boolean = false, targetRes?: number) => {
@@ -308,13 +327,17 @@ export function useImageProcessing(
 
       if (dragging) {
         pendingApplyRef.current = { adjustments: currentAdjustments, targetRes };
-        flushPipeline();
+        schedulePipelineFlush();
       } else {
+        if (pipelineTimerRef.current !== null) {
+          clearTimeout(pipelineTimerRef.current);
+          pipelineTimerRef.current = null;
+        }
         pendingApplyRef.current = null;
         executeApplyAdjustments(currentAdjustments, false, targetRes);
       }
     },
-    [selectedImage?.isReady, flushPipeline, executeApplyAdjustments],
+    [selectedImage?.isReady, schedulePipelineFlush, executeApplyAdjustments],
   );
 
   const generateUncroppedPreview = useCallback(
