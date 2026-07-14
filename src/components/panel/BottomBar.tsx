@@ -10,7 +10,9 @@ import { GLOBAL_KEYS, ImageFile, SelectedImage, ThumbnailAspectRatio } from '../
 import Text from '../ui/Text';
 import { useEditorStore } from '../../store/useEditorStore';
 import { useLibraryStore } from '../../store/useLibraryStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import { COLOR_LABELS } from '../../utils/adjustments';
+import { appendShortcutToTooltip, getShortcutLabel } from '../../utils/keyboardUtils';
 
 interface BottomBarProps {
   filmstripHeight?: number;
@@ -56,6 +58,8 @@ interface StarRatingProps {
 
 const StarRating = ({ rating, onRate, disabled }: StarRatingProps) => {
   const { t } = useTranslation();
+  const appSettings = useSettingsStore((s) => s.appSettings);
+  const osPlatform = useSettingsStore((s) => s.osPlatform);
 
   return (
     <div className={clsx('flex items-center gap-1', disabled && 'cursor-not-allowed')}>
@@ -67,11 +71,12 @@ const StarRating = ({ rating, onRate, disabled }: StarRatingProps) => {
             disabled={disabled}
             key={starValue}
             onClick={() => !disabled && onRate(starValue === rating ? 0 : starValue)}
-            data-tooltip={
+            data-tooltip={appendShortcutToTooltip(
               disabled
                 ? t('ui.bottomBar.tooltips.selectToRate')
-                : t('ui.bottomBar.tooltips.rateStars', { count: starValue })
-            }
+                : t('ui.bottomBar.tooltips.rateStars', { count: starValue }),
+              getShortcutLabel(`rate_${starValue}`, appSettings?.keybinds, osPlatform),
+            )}
           >
             <Star
               size={18}
@@ -127,6 +132,8 @@ export default function BottomBar({
   totalImages,
 }: BottomBarProps) {
   const { t } = useTranslation();
+  const appSettings = useSettingsStore((s) => s.appSettings);
+  const osPlatform = useSettingsStore((s) => s.osPlatform);
   const { displaySize, originalSize } = useEditorStore(
     useShallow((state) => ({
       displaySize: state.displaySize,
@@ -163,6 +170,9 @@ export default function BottomBar({
   );
 
   const allColors = [...COLOR_LABELS, { name: 'none', color: '#9ca3af' }];
+
+  const shortcutTooltip = (tooltip: string, action: string) =>
+    appendShortcutToTooltip(tooltip, getShortcutLabel(action, appSettings?.keybinds, osPlatform));
 
   useEffect(() => {
     if (isZoomReady && !isDraggingSlider.current) {
@@ -296,7 +306,10 @@ export default function BottomBar({
               className="relative w-8 h-8 flex items-center justify-center rounded-md text-text-secondary hover:bg-surface hover:text-text-primary transition-colors disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed"
               disabled={isCopyDisabled}
               onClick={onCopy}
-              data-tooltip={t('ui.bottomBar.tooltips.copySettings')}
+              data-tooltip={shortcutTooltip(
+                t('ui.bottomBar.tooltips.copySettings'),
+                isLibraryView ? 'copy_files' : 'copy_adjustments',
+              )}
             >
               <AnimatePresence mode="wait" initial={false}>
                 {isCopied ? (
@@ -329,7 +342,10 @@ export default function BottomBar({
               className="relative w-8 h-8 flex items-center justify-center rounded-md text-text-secondary hover:bg-surface hover:text-text-primary transition-colors disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed"
               disabled={isPasteDisabled}
               onClick={onPaste}
-              data-tooltip={t('ui.bottomBar.tooltips.pasteSettings')}
+              data-tooltip={shortcutTooltip(
+                t('ui.bottomBar.tooltips.pasteSettings'),
+                isLibraryView ? 'paste_files' : 'paste_adjustments',
+              )}
             >
               <AnimatePresence mode="wait" initial={false}>
                 {isPasted ? (
@@ -490,7 +506,7 @@ export default function BottomBar({
                 onClick={handleResetZoom}
                 onMouseEnter={() => setIsZoomLabelHovered(true)}
                 onMouseLeave={() => setIsZoomLabelHovered(false)}
-                data-tooltip={t('ui.bottomBar.tooltips.resetZoom')}
+                data-tooltip={shortcutTooltip(t('ui.bottomBar.tooltips.resetZoom'), 'zoom_fit')}
               >
                 <span className="absolute right-0 text-xs text-text-secondary select-none text-right w-max transition-colors hover:text-text-primary">
                   {isZoomLabelHovered ? t('ui.bottomBar.zoomLabelReset') : t('ui.bottomBar.zoomLabel')}

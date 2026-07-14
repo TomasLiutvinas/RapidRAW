@@ -174,6 +174,35 @@ pub fn load_base_image_from_bytes(
             }
             Err(_) => {
                 log::error!("Panic while processing RAW file: {}", path_for_ext_check);
+                if let Some(preview) = embedded_preview_fallback(bytes, path_for_ext_check) {
+                    log::warn!(
+                        "Using embedded preview fallback for '{}' after RAW panic ({}x{})",
+                        path_for_ext_check,
+                        preview.width(),
+                        preview.height()
+                    );
+
+                    let mut linear_preview = apply_srgb_to_linear(preview);
+                    match &mut linear_preview {
+                        image::DynamicImage::ImageRgb32F(img) => {
+                            for p in img.pixels_mut() {
+                                p[0] *= 0.4;
+                                p[1] *= 0.4;
+                                p[2] *= 0.4;
+                            }
+                        }
+                        image::DynamicImage::ImageRgba32F(img) => {
+                            for p in img.pixels_mut() {
+                                p[0] *= 0.4;
+                                p[1] *= 0.4;
+                                p[2] *= 0.4;
+                            }
+                        }
+                        _ => {}
+                    }
+
+                    return Ok(linear_preview);
+                }
                 Err(anyhow!(
                     "Failed to process RAW file: {}",
                     path_for_ext_check

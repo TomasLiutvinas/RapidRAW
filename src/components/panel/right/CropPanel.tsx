@@ -24,6 +24,8 @@ import Slider from '../../ui/Slider';
 import { TEXT_COLOR_KEYS, TextColors, TextVariants, TextWeights } from '../../../types/typography';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useEditorActions } from '../../../hooks/useEditorActions';
+import { useSettingsStore } from '../../../store/useSettingsStore';
+import { appendShortcutToTooltip, getShortcutLabel } from '../../../utils/keyboardUtils';
 
 const BASE_RATIO = 1.618;
 const ORIGINAL_RATIO = 0;
@@ -50,6 +52,8 @@ export default function CropPanel() {
   const isStraightenActive = useEditorStore((s) => s.isStraightenActive);
   const activeOverlay = useEditorStore((s) => s.overlayMode);
   const setEditor = useEditorStore((s) => s.setEditor);
+  const appSettings = useSettingsStore((s) => s.appSettings);
+  const osPlatform = useSettingsStore((s) => s.osPlatform);
   const { setAdjustments } = useEditorActions();
   const [customW, setCustomW] = useState('');
   const [customH, setCustomH] = useState('');
@@ -61,6 +65,12 @@ export default function CropPanel() {
 
   const [localRotation, setLocalRotation] = useState<number | null>(null);
   const localRotationRef = useRef<number | null>(null);
+
+  const shortcutTooltip = useCallback(
+    (tooltip: string, action: string) =>
+      appendShortcutToTooltip(tooltip, getShortcutLabel(action, appSettings?.keybinds, osPlatform)),
+    [appSettings?.keybinds, osPlatform],
+  );
 
   const PRESETS = useMemo<Array<CropPreset>>(
     () => [
@@ -599,7 +609,7 @@ export default function CropPanel() {
                             ? 'bg-accent text-button-text'
                             : 'text-text-secondary hover:bg-card-active hover:text-text-primary',
                         )}
-                        data-tooltip={t('editor.crop.tooltips.straighten')}
+                        data-tooltip={shortcutTooltip(t('editor.crop.tooltips.straighten'), 'toggle_crop')}
                       >
                         <Ruler size={14} />
                       </button>
@@ -633,7 +643,7 @@ export default function CropPanel() {
                 <motion.div
                   className="flex flex-col items-center justify-center p-3 cursor-pointer rounded-lg transition-colors bg-surface text-text-secondary hover:bg-card-active hover:text-text-primary"
                   onClick={() => handleStepRotate(-90)}
-                  data-tooltip={t('editor.crop.tooltips.rotateLeft')}
+                  data-tooltip={shortcutTooltip(t('editor.crop.tooltips.rotateLeft'), 'rotate_left')}
                   whileTap={{ scale: 0.98 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 17 }}
                 >
@@ -643,7 +653,7 @@ export default function CropPanel() {
                 <motion.div
                   className="flex flex-col items-center justify-center p-3 cursor-pointer rounded-lg transition-colors bg-surface text-text-secondary hover:bg-card-active hover:text-text-primary"
                   onClick={() => handleStepRotate(90)}
-                  data-tooltip={t('editor.crop.tooltips.rotateRight')}
+                  data-tooltip={shortcutTooltip(t('editor.crop.tooltips.rotateRight'), 'rotate_right')}
                   whileTap={{ scale: 0.98 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 17 }}
                 >
