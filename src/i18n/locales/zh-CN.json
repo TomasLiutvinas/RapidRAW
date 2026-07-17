@@ -1404,6 +1404,15 @@
       "yAxis": "Y 轴",
       "zoomInTooltip": "放大",
       "zoomOutTooltip": "缩小"
+    },
+    "fuzzySearch": {
+      "close": "Close quick search",
+      "current": "Current",
+      "hint": "↑↓ select · Enter open · Esc close",
+      "noResults": "No pictures found",
+      "placeholder": "Search pictures by title...",
+      "resultCount": "Showing {{total}}",
+      "searchLabel": "Search pictures"
     }
   },
   "settings": {
