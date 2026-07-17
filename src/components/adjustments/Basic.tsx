@@ -84,8 +84,8 @@ const ToneMapperSwitch = ({
   }, [selectedMapper, toneMapperOptions]);
 
   return (
-    <div className="group mb-3">
-      <div className="flex justify-between items-center mb-2">
+    <div className="group mb-2">
+      <div className="flex justify-between items-center mb-1.5">
         <div
           className="grid cursor-pointer"
           onClick={handleReset}
@@ -111,7 +111,7 @@ const ToneMapperSwitch = ({
           </span>
         </div>
       </div>
-      <div className="w-full p-2 pb-1 bg-card-active rounded-md">
+      <div className="w-full p-1.5 pb-1 bg-card-active rounded-md">
         <div className="relative flex w-full">
           <motion.div
             className="absolute top-0 bottom-0 z-0 bg-accent"

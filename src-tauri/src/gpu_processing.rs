@@ -1411,7 +1411,8 @@ impl GpuProcessor {
                     true
                 };
 
-                let did_create_sharpness_blur = run_blur(1.0, &self.sharpness_blur_view);
+                let sharpen_radius = adjustments.global.sharpen_radius.clamp(0.5, 3.0);
+                let did_create_sharpness_blur = run_blur(sharpen_radius, &self.sharpness_blur_view);
                 let did_create_tonal_blur = run_blur(3.5, &self.tonal_blur_view);
                 let did_create_clarity_blur = run_blur(8.0, &self.clarity_blur_view);
                 let did_create_structure_blur = run_blur(40.0, &self.structure_blur_view);

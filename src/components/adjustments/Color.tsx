@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Pipette, Sliders } from 'lucide-react';
+import type { CSSProperties } from 'react';
+import { Pipette, Sliders, Palette, Circle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import Slider from '../ui/Slider';
@@ -9,6 +10,45 @@ import { Adjustments, ColorGrading } from '../../utils/adjustments';
 import { AppSettings } from '../ui/AppProperties';
 import Text from '../ui/Text';
 import { TextColors, TextVariants, TextWeights } from '../../types/typography';
+
+// Preset palettes for amateur-friendly color grading
+// Each array represents a set of color choices for a tonal range
+interface ColorPreset {
+  name: string;
+  color: string;
+  hue: number;
+  saturation: number;
+  luminance: number;
+}
+
+const SHADOWS_PRESETS: ColorPreset[] = [
+  { name: 'Deep Blue', color: '#1e3a5f', hue: 210, saturation: 60, luminance: -30 },
+  { name: 'Warm Brown', color: '#5c4033', hue: 25, saturation: 40, luminance: -25 },
+  { name: 'Cool Purple', color: '#4a3a5c', hue: 270, saturation: 30, luminance: -25 },
+  { name: 'Teal', color: '#2a5a5a', hue: 180, saturation: 45, luminance: -30 },
+  { name: 'Forest', color: '#2d4a3a', hue: 140, saturation: 35, luminance: -25 },
+  { name: 'Neutral', color: '#3a3a3a', hue: 0, saturation: 0, luminance: -35 },
+];
+
+const MIDTONES_PRESETS: ColorPreset[] = [
+  { name: 'Warm Glow', color: '#e8a87c', hue: 30, saturation: 55, luminance: 10 },
+  { name: 'Soft Pink', color: '#d4a5a5', hue: 350, saturation: 30, luminance: 15 },
+  { name: 'Sage Green', color: '#a8c4a0', hue: 100, saturation: 30, luminance: 10 },
+  { name: 'Sky Blue', color: '#87ceeb', hue: 195, saturation: 50, luminance: 15 },
+  { name: 'Lavender', color: '#b8a9c9', hue: 270, saturation: 25, luminance: 20 },
+  { name: 'Peach', color: '#f5c4a1', hue: 25, saturation: 45, luminance: 20 },
+];
+
+const HIGHLIGHTS_PRESETS: ColorPreset[] = [
+  { name: 'Golden', color: '#ffd700', hue: 45, saturation: 70, luminance: 20 },
+  { name: 'Warm White', color: '#fff5e6', hue: 35, saturation: 20, luminance: 35 },
+  { name: 'Cool White', color: '#f0f5ff', hue: 220, saturation: 15, luminance: 35 },
+  { name: 'Coral', color: '#ff7f7f', hue: 0, saturation: 50, luminance: 25 },
+  { name: 'Mint', color: '#b8e6d4', hue: 150, saturation: 35, luminance: 25 },
+  { name: 'Cream', color: '#fff8dc', hue: 45, saturation: 25, luminance: 30 },
+];
+
+type ColorGradingMode = 'palette' | 'wheel';
 
 interface ColorProps {
   color: string;
@@ -106,9 +146,151 @@ const ColorSwatch = ({ color, name, isActive, ariaLabel, onClick }: ColorSwatchP
   );
 };
 
+// Palette color picker for amateur-friendly color grading
+interface PaletteSelectorProps {
+  adjustments: Adjustments;
+  setAdjustments: (adjustments: Partial<Adjustments>) => void;
+  isExpanded: boolean;
+  onDragStateChange?: (isDragging: boolean) => void;
+}
+
+const PaletteSelector = ({ adjustments, setAdjustments, isExpanded, onDragStateChange }: PaletteSelectorProps) => {
+  const { t } = useTranslation();
+  const colorGrading = adjustments.colorGrading || INITIAL_ADJUSTMENTS.colorGrading;
+
+  const handleChange = (grading: ColorGrading, newValue: HueSatLum) => {
+    setAdjustments((prev: Partial<Adjustments>) => ({
+      ...prev,
+      colorGrading: {
+        ...(prev.colorGrading || INITIAL_ADJUSTMENTS.colorGrading),
+        [grading]: newValue,
+      },
+    }));
+  };
+
+  const tonalRanges: Array<{
+    key: ColorGrading;
+    label: string;
+    palette: ColorPreset[];
+    currentValue: HueSatLum;
+  }> = [
+    { key: ColorGrading.Shadows, label: t('adjustments.color.grading.shadows'), palette: SHADOWS_PRESETS, currentValue: colorGrading.shadows },
+    { key: ColorGrading.Midtones, label: t('adjustments.color.grading.midtones'), palette: MIDTONES_PRESETS, currentValue: colorGrading.midtones },
+    { key: ColorGrading.Highlights, label: t('adjustments.color.grading.highlights'), palette: HIGHLIGHTS_PRESETS, currentValue: colorGrading.highlights },
+  ];
+
+  const isColorActive = (preset: ColorPreset, currentValue: HueSatLum) => {
+    return (
+      Math.abs(preset.hue - currentValue.hue) < 5 &&
+      Math.abs(preset.saturation - currentValue.saturation) < 5 &&
+      Math.abs(preset.luminance - currentValue.luminance) < 5
+    );
+  };
+
+  const handleSliderChange = (grading: ColorGrading, key: keyof HueSatLum, value: string | number) => {
+    const currentValue = colorGrading[grading] as HueSatLum;
+
+    handleChange(grading, {
+      ...currentValue,
+      [key]: parseFloat(String(value)),
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      {tonalRanges.map(({ key, label, palette, currentValue }) => (
+        <div key={key} className="flex flex-col gap-1.5">
+          <Text variant={TextVariants.label} color={TextColors.secondary}>
+            {label}
+          </Text>
+          <div className="flex gap-2 flex-wrap">
+            {palette.map((preset) => {
+              const isActive = isColorActive(preset, currentValue);
+              return (
+                <button
+                  key={preset.name}
+                  aria-label={t('adjustments.color.grading.presetAria', { name: preset.name })}
+                  onClick={() => {
+                    onDragStateChange?.(true);
+                    handleChange(key, { hue: preset.hue, saturation: preset.saturation, luminance: preset.luminance });
+                    setTimeout(() => onDragStateChange?.(false), 100);
+                  }}
+                  className={`w-7 h-7 rounded-md transition-all focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-1 focus:ring-offset-surface ${
+                    isActive ? 'ring-2 ring-white ring-offset-2 ring-offset-surface scale-110' : 'hover:scale-105'
+                  }`}
+                  style={{ backgroundColor: preset.color }}
+                  title={preset.name}
+                />
+              );
+            })}
+          </div>
+
+          <AnimatePresence initial={false}>
+            {isExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1, transitionEnd: { overflow: 'visible' } }}
+                exit={{ height: 0, opacity: 0, overflow: 'hidden' }}
+                transition={{ duration: 0.2 }}
+                className="mt-1 flex flex-col gap-2"
+              >
+                <Slider
+                  defaultValue={0}
+                  label={t('ui.colorWheel.hue')}
+                  max={360}
+                  min={0}
+                  onChange={(e: { target: { value: string | number } }) => handleSliderChange(key, 'hue', e.target.value)}
+                  onDragStateChange={onDragStateChange}
+                  step={1}
+                  value={currentValue.hue}
+                  trackClassName="cg-hue-gradient"
+                />
+                <div style={{ '--cg-hue': currentValue.hue } as CSSProperties}>
+                  <Slider
+                    defaultValue={0}
+                    label={t('ui.colorWheel.saturation')}
+                    max={100}
+                    min={0}
+                    onChange={(e: { target: { value: string | number } }) => handleSliderChange(key, 'saturation', e.target.value)}
+                    onDragStateChange={onDragStateChange}
+                    step={1}
+                    value={currentValue.saturation}
+                    trackClassName="cg-sat-gradient"
+                  />
+                </div>
+                <div
+                  style={
+                    {
+                      '--cg-hue': currentValue.hue,
+                      '--cg-sat': `${currentValue.saturation}%`,
+                    } as CSSProperties
+                  }
+                >
+                  <Slider
+                    defaultValue={0}
+                    label={t('ui.colorWheel.luminance')}
+                    max={100}
+                    min={-100}
+                    onChange={(e: { target: { value: string | number } }) => handleSliderChange(key, 'luminance', e.target.value)}
+                    onDragStateChange={onDragStateChange}
+                    step={1}
+                    value={currentValue.luminance}
+                    trackClassName="cg-lum-gradient"
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const ColorGradingPanel = ({ adjustments, setAdjustments, onDragStateChange }: ColorPanelProps) => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'3way' | 'global'>('3way');
+  const [colorGradingMode, setColorGradingMode] = useState<ColorGradingMode>('palette');
   const [isExpanded, setIsExpanded] = useState(false);
   const colorGrading = adjustments.colorGrading || INITIAL_ADJUSTMENTS.colorGrading;
 
@@ -156,7 +338,7 @@ const ColorGradingPanel = ({ adjustments, setAdjustments, onDragStateChange }: C
 
   return (
     <div>
-      <div className="flex items-center justify-start gap-2 mb-4 mt-2">
+      <div className="flex items-center justify-start gap-2 mb-3 mt-1">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
@@ -177,6 +359,36 @@ const ColorGradingPanel = ({ adjustments, setAdjustments, onDragStateChange }: C
 
         <div className="w-px h-5 bg-text-secondary/20 mx-1" />
 
+        {activeTab === '3way' && (
+          <>
+            <button
+              onClick={() => setColorGradingMode('palette')}
+              className={`w-7 h-7 rounded-full flex items-center justify-center transition-all focus:outline-none
+                ${
+                  colorGradingMode === 'palette'
+                    ? 'ring-2 ring-offset-2 ring-offset-surface ring-accent text-text-primary'
+                    : 'bg-bg-secondary text-text-secondary hover:text-text-primary hover:bg-bg-secondary/80'
+                }`}
+              data-tooltip={t('adjustments.color.grading.paletteMode')}
+            >
+              <Palette size={14} />
+            </button>
+            <button
+              onClick={() => setColorGradingMode('wheel')}
+              className={`w-7 h-7 rounded-full flex items-center justify-center transition-all focus:outline-none
+                ${
+                  colorGradingMode === 'wheel'
+                    ? 'ring-2 ring-offset-2 ring-offset-surface ring-accent text-text-primary'
+                    : 'bg-bg-secondary text-text-secondary hover:text-text-primary hover:bg-bg-secondary/80'
+                }`}
+              data-tooltip={t('adjustments.color.grading.wheelMode')}
+            >
+              <Circle size={14} />
+            </button>
+            <div className="w-px h-5 bg-text-secondary/20 mx-1" />
+          </>
+        )}
+
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           className={`w-7 h-7 rounded-full flex items-center justify-center transition-all focus:outline-none
@@ -191,7 +403,7 @@ const ColorGradingPanel = ({ adjustments, setAdjustments, onDragStateChange }: C
         </button>
       </div>
 
-      <div className="relative w-full mb-4">
+      <div className="relative w-full mb-3">
         <AnimatePresence mode="wait">
           {activeTab === '3way' ? (
             <motion.div
@@ -202,40 +414,65 @@ const ColorGradingPanel = ({ adjustments, setAdjustments, onDragStateChange }: C
               transition={{ duration: 0.2 }}
               className="w-full"
             >
-              <div className="flex justify-center mb-4">
-                <div className="w-[calc(50%-0.5rem)]">
-                  <ColorWheel
-                    defaultValue={INITIAL_ADJUSTMENTS.colorGrading.midtones}
-                    label={t('adjustments.color.grading.midtones')}
-                    onChange={(val: HueSatLum) => handleChange(ColorGrading.Midtones, val)}
-                    value={colorGrading.midtones}
-                    onDragStateChange={onDragStateChange}
+              {colorGradingMode === 'palette' ? (
+                <motion.div
+                  key="palette"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <PaletteSelector
+                    adjustments={adjustments}
+                    setAdjustments={setAdjustments}
                     isExpanded={isExpanded}
-                  />
-                </div>
-              </div>
-              <div className="flex justify-between mb-2 gap-4">
-                <div className="w-full flex-1 min-w-0">
-                  <ColorWheel
-                    defaultValue={INITIAL_ADJUSTMENTS.colorGrading.shadows}
-                    label={t('adjustments.color.grading.shadows')}
-                    onChange={(val: HueSatLum) => handleChange(ColorGrading.Shadows, val)}
-                    value={colorGrading.shadows}
                     onDragStateChange={onDragStateChange}
-                    isExpanded={isExpanded}
                   />
-                </div>
-                <div className="w-full flex-1 min-w-0">
-                  <ColorWheel
-                    defaultValue={INITIAL_ADJUSTMENTS.colorGrading.highlights}
-                    label={t('adjustments.color.grading.highlights')}
-                    onChange={(val: HueSatLum) => handleChange(ColorGrading.Highlights, val)}
-                    value={colorGrading.highlights}
-                    onDragStateChange={onDragStateChange}
-                    isExpanded={isExpanded}
-                  />
-                </div>
-              </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="wheel"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <div className="flex justify-center mb-3">
+                    <div className="w-[calc(50%-0.5rem)]">
+                      <ColorWheel
+                        defaultValue={INITIAL_ADJUSTMENTS.colorGrading.midtones}
+                        label={t('adjustments.color.grading.midtones')}
+                        onChange={(val: HueSatLum) => handleChange(ColorGrading.Midtones, val)}
+                        value={colorGrading.midtones}
+                        onDragStateChange={onDragStateChange}
+                        isExpanded={isExpanded}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-between mb-1.5 gap-4">
+                    <div className="w-full flex-1 min-w-0">
+                      <ColorWheel
+                        defaultValue={INITIAL_ADJUSTMENTS.colorGrading.shadows}
+                        label={t('adjustments.color.grading.shadows')}
+                        onChange={(val: HueSatLum) => handleChange(ColorGrading.Shadows, val)}
+                        value={colorGrading.shadows}
+                        onDragStateChange={onDragStateChange}
+                        isExpanded={isExpanded}
+                      />
+                    </div>
+                    <div className="w-full flex-1 min-w-0">
+                      <ColorWheel
+                        defaultValue={INITIAL_ADJUSTMENTS.colorGrading.highlights}
+                        label={t('adjustments.color.grading.highlights')}
+                        onChange={(val: HueSatLum) => handleChange(ColorGrading.Highlights, val)}
+                        value={colorGrading.highlights}
+                        onDragStateChange={onDragStateChange}
+                        isExpanded={isExpanded}
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
             </motion.div>
           ) : (
             <motion.div

@@ -119,7 +119,7 @@ pub fn convert_xmp_to_preset(xmp_content: &str) -> Result<Preset, String> {
         ("Texture", "structure"),
         ("SharpenRadius", "sharpenRadius"),
         ("SharpenDetail", "sharpenDetail"),
-        ("SharpenEdgeMasking", "sharpenMasking"),
+        ("SharpenEdgeMasking", "sharpnessThreshold"),
         ("LuminanceSmoothing", "lumaNoiseReduction"),
         ("ColorNoiseReduction", "colorNoiseReduction"),
         ("ColorNoiseReductionDetail", "colorNoiseDetail"),
