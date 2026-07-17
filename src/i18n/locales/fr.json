@@ -1332,6 +1332,15 @@
       "yAxis": "Axe Y",
       "zoomInTooltip": "Zoom avant",
       "zoomOutTooltip": "Zoom arrière"
+    },
+    "fuzzySearch": {
+      "close": "Close quick search",
+      "current": "Current",
+      "hint": "↑↓ select · Enter open · Esc close",
+      "noResults": "No pictures found",
+      "placeholder": "Search pictures by title...",
+      "resultCount": "Showing {{total}}",
+      "searchLabel": "Search pictures"
     }
   },
   "settings": {

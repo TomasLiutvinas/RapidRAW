@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { ImageFile, LibraryViewMode, Panel, UiVisibility, CullingSuggestions } from '../components/ui/AppProperties';
+import { ImageFile, Panel, UiVisibility, CullingSuggestions } from '../components/ui/AppProperties';
 
 const RIGHT_PANEL_ORDER = [
   Panel.Metadata,
@@ -101,6 +101,7 @@ interface UIState {
   isCreateFolderModalOpen: boolean;
   isRenameFolderModalOpen: boolean;
   isRenameFileModalOpen: boolean;
+  isFuzzySearchModalOpen: boolean;
   renameTargetPaths: Array<string>;
   isImportModalOpen: boolean;
   isCopyPasteSettingsModalOpen: boolean;
@@ -152,6 +153,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   isCreateFolderModalOpen: false,
   isRenameFolderModalOpen: false,
   isRenameFileModalOpen: false,
+  isFuzzySearchModalOpen: false,
   renameTargetPaths: [],
   isImportModalOpen: false,
   isCopyPasteSettingsModalOpen: false,

@@ -64,6 +64,13 @@ export const useKeyboardShortcuts = ({
           handleImageSelect(s.library.libraryActivePath!);
         },
       },
+      fuzzy_search: {
+        shouldFire: (s: ReturnType<typeof getStoreState>) => s.library.imageList.length > 0,
+        execute: (e: KeyboardEvent, s: ReturnType<typeof getStoreState>) => {
+          e.preventDefault();
+          s.ui.setUI({ isFuzzySearchModalOpen: true });
+        },
+      },
       copy_adjustments: {
         shouldFire: () => true,
         execute: (e: any) => {
@@ -523,6 +530,7 @@ export const useKeyboardShortcuts = ({
         state.ui.isRenameFileModalOpen ||
         state.ui.isImportModalOpen ||
         state.ui.isCopyPasteSettingsModalOpen ||
+        state.ui.isFuzzySearchModalOpen ||
         state.ui.confirmModalState.isOpen ||
         state.ui.panoramaModalState.isOpen ||
         state.ui.cullingModalState.isOpen ||

@@ -26,6 +26,12 @@ export const KEYBIND_DEFINITIONS: KeybindDefinition[] = [
     section: 'library',
   },
   {
+    action: 'fuzzy_search',
+    description: 'settings.keybinds.actions.fuzzy_search',
+    defaultCombo: ['Slash'],
+    section: 'library',
+  },
+  {
     action: 'copy_files',
     description: 'settings.keybinds.actions.copy_files',
     defaultCombo: ['ctrl', 'shift', 'KeyC'],
