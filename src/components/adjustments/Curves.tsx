@@ -1,8 +1,17 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RotateCcw, Copy, ClipboardPaste, Spline, Settings2 } from 'lucide-react';
+import { RotateCcw, Copy, ClipboardPaste, Spline, Settings2, SlidersHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { ActiveChannel, Adjustments, Coord, ParametricCurveSettings } from '../../utils/adjustments';
+import {
+  ActiveChannel,
+  Adjustments,
+  Coord,
+  CurveMode,
+  DEFAULT_LEVELS_SETTINGS,
+  getDefaultLevels,
+  LevelsSettings,
+  ParametricCurveSettings,
+} from '../../utils/adjustments';
 import { Theme, OPTION_SEPARATOR } from '../ui/AppProperties';
 import { useContextMenu } from '../../context/ContextMenuContext';
 import Text from '../ui/Text';
@@ -11,6 +20,9 @@ import { TextColors, TextVariants, TextWeights } from '../../types/typography';
 
 let curveClipboard: Array<Coord> | null = null;
 let parametricClipboard: any = null;
+let levelsClipboard: LevelsSettings | null = null;
+
+type LevelHandle = 'inputBlack' | 'gamma' | 'inputWhite' | 'outputBlack' | 'outputWhite';
 
 export interface ChannelConfig {
   [index: string]: ColorData;
@@ -258,6 +270,78 @@ function getSplitterGradient(channel: ActiveChannel) {
   }
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function normalizeLevelsSettings(settings: LevelsSettings): LevelsSettings {
+  const outputBlack = clamp(settings.outputBlack, 0, Math.min(254, settings.outputWhite - 1));
+  const outputWhite = clamp(settings.outputWhite, Math.max(1, outputBlack + 1), 255);
+  const inputBlack = clamp(settings.inputBlack, 0, Math.min(254, settings.inputWhite - 1));
+  const inputWhite = clamp(settings.inputWhite, Math.max(1, inputBlack + 1), 255);
+
+  return {
+    inputBlack,
+    gamma: clamp(settings.gamma || 1, 0.1, 9.99),
+    inputWhite,
+    outputBlack,
+    outputWhite,
+  };
+}
+
+function buildLevelsPoints(settings: LevelsSettings): Array<Coord> {
+  const levels = normalizeLevelsSettings(settings);
+  const points: Array<Coord> = [];
+  const addPoint = (x: number, y: number) => {
+    const point = { x: Number(clamp(x, 0, 255).toFixed(2)), y: Number(clamp(y, 0, 255).toFixed(2)) };
+    const previous = points[points.length - 1];
+    if (previous && Math.abs(previous.x - point.x) < 0.01) {
+      points[points.length - 1] = point;
+      return;
+    }
+    points.push(point);
+  };
+
+  const range = Math.max(1, levels.inputWhite - levels.inputBlack);
+  const outputRange = levels.outputWhite - levels.outputBlack;
+  addPoint(0, levels.outputBlack);
+  addPoint(levels.inputBlack, levels.outputBlack);
+
+  for (let i = 1; i < 10; i++) {
+    const normalizedInput = i / 10;
+    const x = levels.inputBlack + normalizedInput * range;
+    const y = levels.outputBlack + Math.pow(normalizedInput, levels.gamma) * outputRange;
+    addPoint(x, y);
+  }
+
+  addPoint(levels.inputWhite, levels.outputWhite);
+  addPoint(255, levels.outputWhite);
+
+  return points;
+}
+
+function gammaToMidpoint(settings: LevelsSettings) {
+  const levels = normalizeLevelsSettings(settings);
+  const normalizedMidpoint = Math.pow(0.5, 1 / levels.gamma);
+  return levels.inputBlack + normalizedMidpoint * (levels.inputWhite - levels.inputBlack);
+}
+
+function midpointToGamma(midpoint: number, settings: LevelsSettings) {
+  const levels = normalizeLevelsSettings(settings);
+  const range = Math.max(1, levels.inputWhite - levels.inputBlack);
+  const normalizedMidpoint = clamp((midpoint - levels.inputBlack) / range, 0.02, 0.98);
+  return Number(clamp(Math.log(0.5) / Math.log(normalizedMidpoint), 0.1, 9.99).toFixed(2));
+}
+
+function buildLevelsCurves(levels: ReturnType<typeof getDefaultLevels>) {
+  return {
+    luma: buildLevelsPoints(levels.luma),
+    red: buildLevelsPoints(levels.red),
+    green: buildLevelsPoints(levels.green),
+    blue: buildLevelsPoints(levels.blue),
+  };
+}
+
 function convertParametricToPoints(settings: ParametricCurveSettings): Array<Coord> {
   return buildParametricPoints(settings);
 }
@@ -271,28 +355,40 @@ export default function CurveGraph({
 }: CurveGraphProps) {
   const { t } = useTranslation();
   const { showContextMenu } = useContextMenu();
-  const [curveMode, setCurveMode] = useState<'point' | 'parametric'>(adjustments.curveMode || 'point');
+  const [curveMode, setCurveMode] = useState<CurveMode>(adjustments.curveMode || 'point');
   const [activeChannel, setActiveChannel] = useState<ActiveChannel>(ActiveChannel.Luma);
   const [draggingPointIndex, setDraggingPointIndex] = useState<number | null>(null);
   const [draggingSplitKey, setDraggingSplitKey] = useState<'split1' | 'split2' | 'split3' | null>(null);
+  const [draggingLevelHandle, setDraggingLevelHandle] = useState<LevelHandle | null>(null);
   const [localPoints, setLocalPoints] = useState<Array<Coord> | null>(null);
   const [localParametricSettings, setLocalParametricSettings] = useState<ParametricCurveSettings | null>(null);
+  const [localLevelsSettings, setLocalLevelsSettings] = useState<LevelsSettings | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const splitterContainerRef = useRef<HTMLDivElement>(null);
+  const inputLevelsContainerRef = useRef<HTMLDivElement>(null);
+  const outputLevelsContainerRef = useRef<HTMLDivElement>(null);
   const activeChannelRef = useRef(activeChannel);
   const draggingIndexRef = useRef<number | null>(null);
   const localPointsRef = useRef<Array<Coord> | null>(null);
   const localParametricSettingsRef = useRef<ParametricCurveSettings | null>(null);
+  const localLevelsSettingsRef = useRef<LevelsSettings | null>(null);
   const isParametricMode = curveMode === 'parametric';
+  const isLevelsMode = curveMode === 'levels';
 
   const parametricCurves = adjustments?.parametricCurve || DEFAULT_PARAMETRIC_CURVE;
   const parametricCurvesRef = useRef(parametricCurves);
+  const levels = adjustments?.levels || getDefaultLevels();
+  const levelsRef = useRef(levels);
 
   useEffect(() => {
     parametricCurvesRef.current = parametricCurves;
   }, [parametricCurves]);
+
+  useEffect(() => {
+    levelsRef.current = levels;
+  }, [levels]);
 
   useEffect(() => {
     setCurveMode(adjustments.curveMode || 'point');
@@ -301,7 +397,11 @@ export default function CurveGraph({
   const activeParametricSettings =
     (draggingSplitKey ? localParametricSettings : null) ?? parametricCurves[activeChannel];
 
-  const handleToggleMode = (newMode: 'point' | 'parametric') => {
+  const activeLevelsSettings = normalizeLevelsSettings(
+    (draggingLevelHandle ? localLevelsSettings : null) ?? levels[activeChannel] ?? DEFAULT_LEVELS_SETTINGS,
+  );
+
+  const handleToggleMode = (newMode: CurveMode) => {
     if (newMode === curveMode) return;
     setCurveMode(newMode);
 
@@ -311,7 +411,7 @@ export default function CurveGraph({
         return {
           ...prev,
           curveMode: 'parametric',
-          pointCurves: prev.curves,
+          pointCurves: prev.curveMode === 'point' ? prev.curves : prev.pointCurves,
           curves: {
             luma: buildParametricPoints(pC.luma),
             red: buildParametricPoints(pC.red),
@@ -319,14 +419,25 @@ export default function CurveGraph({
             blue: buildParametricPoints(pC.blue),
           },
         };
-      } else {
-        const restoredPointCurves = prev.pointCurves || DEFAULT_POINT_CURVES;
+      }
+
+      if (newMode === 'levels') {
+        const currentLevels = prev.levels || getDefaultLevels();
         return {
           ...prev,
-          curveMode: 'point',
-          curves: restoredPointCurves,
+          curveMode: 'levels',
+          pointCurves: prev.curveMode === 'point' ? prev.curves : prev.pointCurves,
+          levels: currentLevels,
+          curves: buildLevelsCurves(currentLevels),
         };
       }
+
+      const restoredPointCurves = prev.pointCurves || DEFAULT_POINT_CURVES;
+      return {
+        ...prev,
+        curveMode: 'point',
+        curves: restoredPointCurves,
+      };
     });
   };
 
@@ -350,12 +461,37 @@ export default function CurveGraph({
     });
   };
 
+  const updateLevelsSettings = (settings: LevelsSettings, channel = activeChannelRef.current) => {
+    const normalized = normalizeLevelsSettings(settings);
+    setLocalLevelsSettings(normalized);
+    localLevelsSettingsRef.current = normalized;
+
+    setAdjustments((prev: any) => {
+      const currentLevels = prev.levels || getDefaultLevels();
+      const newPoints = buildLevelsPoints(normalized);
+
+      return {
+        ...prev,
+        levels: {
+          ...currentLevels,
+          [channel]: normalized,
+        },
+        curves: {
+          ...prev.curves,
+          [channel]: newPoints,
+        },
+      };
+    });
+  };
+
   useEffect(() => {
     activeChannelRef.current = activeChannel;
     setLocalPoints(null);
     setDraggingPointIndex(null);
     setLocalParametricSettings(null);
     setDraggingSplitKey(null);
+    setLocalLevelsSettings(null);
+    setDraggingLevelHandle(null);
   }, [activeChannel]);
 
   useEffect(() => {
@@ -366,10 +502,10 @@ export default function CurveGraph({
   }, [adjustments?.curves?.[activeChannel], draggingPointIndex]);
 
   useEffect(() => {
-    const isDragging = draggingPointIndex !== null || draggingSplitKey !== null;
+    const isDragging = draggingPointIndex !== null || draggingSplitKey !== null || draggingLevelHandle !== null;
     onDragStateChange?.(isDragging);
     draggingIndexRef.current = draggingPointIndex;
-  }, [draggingPointIndex, draggingSplitKey, onDragStateChange]);
+  }, [draggingPointIndex, draggingSplitKey, draggingLevelHandle, onDragStateChange]);
 
   useEffect(() => {
     const handleMove = (e: any) => {
@@ -405,7 +541,39 @@ export default function CurveGraph({
         return;
       }
 
-      if (!isParametricMode && draggingIndexRef.current !== null) {
+      if (isLevelsMode && draggingLevelHandle) {
+        const isOutputHandle = draggingLevelHandle === 'outputBlack' || draggingLevelHandle === 'outputWhite';
+        const container = isOutputHandle ? outputLevelsContainerRef.current : inputLevelsContainerRef.current;
+        if (!container) return;
+
+        const rect = container.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const rawValue = clamp(((clientX - rect.left) / rect.width) * 255, 0, 255);
+        const currentSettings = normalizeLevelsSettings(
+          localLevelsSettingsRef.current || levelsRef.current[activeChannelRef.current] || DEFAULT_LEVELS_SETTINGS,
+        );
+        let newSettings: LevelsSettings = { ...currentSettings };
+
+        if (draggingLevelHandle === 'inputBlack') {
+          newSettings.inputBlack = clamp(rawValue, 0, currentSettings.inputWhite - 1);
+        } else if (draggingLevelHandle === 'gamma') {
+          newSettings.gamma = midpointToGamma(rawValue, currentSettings);
+        } else if (draggingLevelHandle === 'inputWhite') {
+          newSettings.inputWhite = clamp(rawValue, currentSettings.inputBlack + 1, 255);
+        } else if (draggingLevelHandle === 'outputBlack') {
+          newSettings.outputBlack = clamp(rawValue, 0, currentSettings.outputWhite - 1);
+        } else if (draggingLevelHandle === 'outputWhite') {
+          newSettings.outputWhite = clamp(rawValue, currentSettings.outputBlack + 1, 255);
+        }
+
+        newSettings = normalizeLevelsSettings(newSettings);
+        updateLevelsSettings(newSettings);
+
+        if (e.cancelable) e.preventDefault();
+        return;
+      }
+
+      if (!isParametricMode && !isLevelsMode && draggingIndexRef.current !== null) {
         const index = draggingIndexRef.current;
         const currentPoints = localPointsRef.current || adjustments?.curves?.[activeChannelRef.current];
         if (!currentPoints) return;
@@ -448,14 +616,17 @@ export default function CurveGraph({
     const handleUp = () => {
       setDraggingPointIndex(null);
       setDraggingSplitKey(null);
+      setDraggingLevelHandle(null);
       draggingIndexRef.current = null;
       localPointsRef.current = null;
       setLocalParametricSettings(null);
       localParametricSettingsRef.current = null;
+      setLocalLevelsSettings(null);
+      localLevelsSettingsRef.current = null;
       onDragStateChange?.(false);
     };
 
-    if (draggingPointIndex !== null || draggingSplitKey !== null) {
+    if (draggingPointIndex !== null || draggingSplitKey !== null || draggingLevelHandle !== null) {
       window.addEventListener('mousemove', handleMove, { passive: false });
       window.addEventListener('mouseup', handleUp);
       window.addEventListener('touchmove', handleMove, { passive: false });
@@ -470,7 +641,7 @@ export default function CurveGraph({
       window.removeEventListener('touchend', handleUp);
       window.removeEventListener('touchcancel', handleUp);
     };
-  }, [draggingPointIndex, draggingSplitKey, isParametricMode]);
+  }, [draggingPointIndex, draggingSplitKey, draggingLevelHandle, isParametricMode, isLevelsMode]);
 
   const isLightTheme = theme === Theme.Light || theme === Theme.Arctic;
   const histogramOpacity = isLightTheme ? 0.6 : 0.15;
@@ -485,14 +656,16 @@ export default function CurveGraph({
     [histogram],
   );
 
-  const activePoints = isParametricMode
-    ? buildParametricPoints(activeParametricSettings)
-    : (localPoints ?? adjustments?.curves?.[activeChannel]);
+  const activePoints: Array<Coord> = isLevelsMode
+    ? buildLevelsPoints(activeLevelsSettings)
+    : isParametricMode
+      ? buildParametricPoints(activeParametricSettings)
+      : (localPoints ?? adjustments?.curves?.[activeChannel] ?? DEFAULT_POINT_CURVES[activeChannel]);
 
   const { color, data: histogramData } = channelConfig[activeChannel];
 
   const handlePointStart = (e: any, index: number) => {
-    if (isParametricMode || e.button === 2) return;
+    if (isParametricMode || isLevelsMode || e.button === 2) return;
     if (!e.touches) e.preventDefault();
     e.stopPropagation();
 
@@ -504,11 +677,11 @@ export default function CurveGraph({
   };
 
   const handlePointContextMenu = (e: React.MouseEvent, index: number) => {
-    if (isParametricMode) return;
+    if (isParametricMode || isLevelsMode) return;
     if (index > 0 && index < activePoints.length - 1) {
       e.preventDefault();
       e.stopPropagation();
-      const newPoints = activePoints.filter((_, i) => i !== index);
+      const newPoints = activePoints.filter((_: Coord, i: number) => i !== index);
       setLocalPoints(newPoints);
       localPointsRef.current = newPoints;
       setAdjustments((prev: any) => ({
@@ -519,7 +692,7 @@ export default function CurveGraph({
   };
 
   const handleContainerStart = (e: any) => {
-    if (isParametricMode || (!e.touches && e.button !== 0) || e.target.tagName === 'circle') return;
+    if (isParametricMode || isLevelsMode || (!e.touches && e.button !== 0) || e.target.tagName === 'circle') return;
     onDragStateChange?.(true);
 
     const svg = svgRef.current;
@@ -543,8 +716,21 @@ export default function CurveGraph({
     draggingIndexRef.current = newPointIndex;
   };
 
+  const handleLevelHandleStart = (handle: LevelHandle, e: any) => {
+    if (!e.touches) e.preventDefault();
+    e.stopPropagation();
+    onDragStateChange?.(true);
+    const settings = normalizeLevelsSettings(levelsRef.current[activeChannelRef.current] || DEFAULT_LEVELS_SETTINGS);
+    setLocalLevelsSettings(settings);
+    localLevelsSettingsRef.current = settings;
+    setDraggingLevelHandle(handle);
+  };
+
   const handleDoubleClick = () => {
-    if (isParametricMode) {
+    if (isLevelsMode) {
+      const defaultSettings = { ...DEFAULT_LEVELS_SETTINGS };
+      updateLevelsSettings(defaultSettings);
+    } else if (isParametricMode) {
       const defaultSettings = { ...DEFAULT_PARAMETRIC_CURVE_SETTINGS };
       setAdjustments((prev: any) => {
         const pC = prev.parametricCurve || DEFAULT_PARAMETRIC_CURVE;
@@ -572,6 +758,77 @@ export default function CurveGraph({
     e.stopPropagation();
 
     const channelLabel = t(`adjustments.curves.channels.${activeChannel}`);
+
+    if (isLevelsMode) {
+      const handleCopyLevels = () => {
+        levelsClipboard = { ...activeLevelsSettings };
+      };
+
+      const handlePasteLevels = () => {
+        if (!levelsClipboard) return;
+        updateLevelsSettings({ ...levelsClipboard });
+      };
+
+      const handleResetLevels = () => {
+        updateLevelsSettings({ ...DEFAULT_LEVELS_SETTINGS });
+      };
+
+      const handleResetAllLevels = () => {
+        const defaultLevels = getDefaultLevels();
+        setLocalLevelsSettings(null);
+        localLevelsSettingsRef.current = null;
+        setAdjustments((prev: any) => ({
+          ...prev,
+          levels: defaultLevels,
+          curves: buildLevelsCurves(defaultLevels),
+        }));
+      };
+
+      const areOtherLevelsDirty = [ActiveChannel.Luma, ActiveChannel.Red, ActiveChannel.Green, ActiveChannel.Blue].some(
+        (channel) => {
+          const settings = normalizeLevelsSettings(levels[channel] || DEFAULT_LEVELS_SETTINGS);
+          return (
+            channel !== activeChannel &&
+            (settings.inputBlack !== DEFAULT_LEVELS_SETTINGS.inputBlack ||
+              settings.gamma !== DEFAULT_LEVELS_SETTINGS.gamma ||
+              settings.inputWhite !== DEFAULT_LEVELS_SETTINGS.inputWhite ||
+              settings.outputBlack !== DEFAULT_LEVELS_SETTINGS.outputBlack ||
+              settings.outputWhite !== DEFAULT_LEVELS_SETTINGS.outputWhite)
+          );
+        },
+      );
+
+      const options = [
+        {
+          label: t('adjustments.curves.copyLevels', { channel: channelLabel }),
+          icon: Copy,
+          onClick: handleCopyLevels,
+        },
+        {
+          label: t('adjustments.curves.pasteLevels'),
+          icon: ClipboardPaste,
+          onClick: handlePasteLevels,
+          disabled: !levelsClipboard,
+        },
+        { type: OPTION_SEPARATOR },
+        {
+          label: t('adjustments.curves.resetLevels', { channel: channelLabel }),
+          icon: RotateCcw,
+          onClick: handleResetLevels,
+        },
+      ];
+
+      if (areOtherLevelsDirty) {
+        options.push({
+          label: t('adjustments.curves.resetAllLevels'),
+          icon: RotateCcw,
+          onClick: handleResetAllLevels,
+        });
+      }
+
+      showContextMenu(e.clientX, e.clientY, options);
+      return;
+    }
 
     if (isParametricMode) {
       const handleCopyParametric = () => {
@@ -666,7 +923,7 @@ export default function CurveGraph({
     }
 
     const handleCopy = () => {
-      curveClipboard = activePoints.map((p) => ({ ...p }));
+      curveClipboard = activePoints.map((p: Coord) => ({ ...p }));
     };
 
     const handlePaste = () => {
@@ -766,6 +1023,30 @@ export default function CurveGraph({
     [activeParametricSettings.split1, activeParametricSettings.split2, activeParametricSettings.split3],
   );
 
+  const levelValues = [
+    Math.round(activeLevelsSettings.inputBlack),
+    activeLevelsSettings.gamma.toFixed(2),
+    Math.round(activeLevelsSettings.inputWhite),
+  ];
+
+  const renderLevelHandle = (handle: LevelHandle, value: number, title: string, isOutput = false) => (
+    <button
+      aria-label={title}
+      className={`absolute -translate-x-1/2 ${isOutput ? '-top-0.5' : '-top-1'} h-5 w-5 cursor-ew-resize touch-none`}
+      onMouseDown={(e) => handleLevelHandleStart(handle, e)}
+      onTouchStart={(e) => handleLevelHandleStart(handle, e)}
+      style={{ left: `${(clamp(value, 0, 255) / 255) * 100}%` }}
+      title={title}
+      type="button"
+    >
+      <span
+        className={`absolute left-1/2 -translate-x-1/2 ${isOutput ? 'top-1' : 'top-0'} h-0 w-0 border-l-[5px] border-r-[5px] border-l-transparent border-r-transparent ${
+          isOutput ? 'border-b-[8px] border-b-text-primary' : 'border-t-[8px] border-t-text-primary'
+        } drop-shadow`}
+      />
+    </button>
+  );
+
   if (!activePoints) {
     return (
       <Text
@@ -780,11 +1061,11 @@ export default function CurveGraph({
 
   return (
     <div className="select-none touch-none" ref={containerRef}>
-      <div className="flex items-center justify-between gap-2 mb-2 mt-2">
+      <div className="flex items-center justify-between gap-2 mb-1.5 mt-1.5">
         <div className="flex items-center gap-1 p-1 rounded-lg bg-surface-secondary shrink-0">
           <button
             className={`w-8 h-8 rounded-md flex items-center justify-center transition-all ${
-              !isParametricMode ? 'bg-surface text-text-primary' : 'text-text-secondary hover:text-text-primary'
+              !isParametricMode && !isLevelsMode ? 'bg-surface text-text-primary' : 'text-text-secondary hover:text-text-primary'
             }`}
             onClick={() => handleToggleMode('point')}
             data-tooltip={t('adjustments.curves.pointCurve')}
@@ -802,12 +1083,22 @@ export default function CurveGraph({
           >
             <Settings2 size={16} />
           </button>
+          <button
+            className={`w-8 h-8 rounded-md flex items-center justify-center transition-all ${
+              isLevelsMode ? 'bg-surface text-text-primary' : 'text-text-secondary hover:text-text-primary'
+            }`}
+            onClick={() => handleToggleMode('levels')}
+            data-tooltip={t('adjustments.curves.levels')}
+            type="button"
+          >
+            <SlidersHorizontal size={16} />
+          </button>
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
-          {Object.keys(channelConfig).map((channel: any) => {
+          {[ActiveChannel.Luma, ActiveChannel.Red, ActiveChannel.Green, ActiveChannel.Blue].map((channel: ActiveChannel) => {
             const selected = activeChannel === channel;
-            const channelLabel = t(`adjustments.curves.channels.${channel}`);
+            const channelLabel = t(`adjustments.curves.channels.${channel}` as any) as string;
             return (
               <button
                 key={channel}
@@ -833,7 +1124,7 @@ export default function CurveGraph({
 
       <div className="relative">
         <div
-          className="w-full aspect-square bg-surface-secondary p-1 rounded-md relative touch-none"
+          className={`w-full bg-surface-secondary p-1 rounded-md relative touch-none ${isLevelsMode ? 'h-36' : 'aspect-square'}`}
           onMouseDown={handleContainerStart}
           onTouchStart={handleContainerStart}
           onDoubleClick={handleDoubleClick}
@@ -842,7 +1133,7 @@ export default function CurveGraph({
           <svg ref={svgRef} viewBox="0 0 255 255" className="w-full h-full overflow-visible">
             <path
               d={
-                isParametricMode
+                isParametricMode || isLevelsMode
                   ? 'M 0,63.75 H 255 M 0,127.5 H 255 M 0,191.25 H 255'
                   : 'M 63.75,0 V 255 M 127.5,0 V 255 M 191.25,0 V 255 M 0,63.75 H 255 M 0,127.5 H 255 M 0,191.25 H 255'
               }
@@ -907,7 +1198,7 @@ export default function CurveGraph({
               </>
             )}
 
-            {!isParametricMode &&
+            {!isParametricMode && !isLevelsMode &&
               activePoints.map((p: Coord, i: number) => (
                 <circle
                   className="cursor-pointer"
@@ -928,6 +1219,80 @@ export default function CurveGraph({
       </div>
 
       <AnimatePresence initial={false}>
+        {isLevelsMode && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="overflow-hidden origin-top"
+          >
+            <div className="pt-3 pb-1 flex flex-col gap-3" onContextMenu={handleContextMenu}>
+              <div>
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <Text variant={TextVariants.small} color={TextColors.secondary} weight={TextWeights.medium}>
+                    {t('adjustments.curves.inputLevels')}
+                  </Text>
+                  <div className="flex gap-1">
+                    {levelValues.map((value, index) => (
+                      <div key={index} className="min-w-10 rounded bg-surface-secondary px-1.5 py-0.5 text-center">
+                        <Text variant={TextVariants.small} color={TextColors.primary}>
+                          {value}
+                        </Text>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div ref={inputLevelsContainerRef} className="relative h-7 px-0.5">
+                  <div
+                    className="absolute left-0 right-0 top-2 h-3 rounded-sm border border-surface bg-surface overflow-hidden"
+                    style={{ background: getSplitterGradient(activeChannel) }}
+                  />
+                  {renderLevelHandle('inputBlack', activeLevelsSettings.inputBlack, t('adjustments.curves.inputBlack'))}
+                  {renderLevelHandle('gamma', gammaToMidpoint(activeLevelsSettings), t('adjustments.curves.gamma'))}
+                  {renderLevelHandle('inputWhite', activeLevelsSettings.inputWhite, t('adjustments.curves.inputWhite'))}
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <Text variant={TextVariants.small} color={TextColors.secondary} weight={TextWeights.medium}>
+                    {t('adjustments.curves.outputLevels')}
+                  </Text>
+                  <div className="flex gap-1">
+                    {[Math.round(activeLevelsSettings.outputBlack), Math.round(activeLevelsSettings.outputWhite)].map(
+                      (value, index) => (
+                        <div key={index} className="min-w-10 rounded bg-surface-secondary px-1.5 py-0.5 text-center">
+                          <Text variant={TextVariants.small} color={TextColors.primary}>
+                            {value}
+                          </Text>
+                        </div>
+                      ),
+                    )}
+                  </div>
+                </div>
+                <div ref={outputLevelsContainerRef} className="relative h-7 px-0.5">
+                  <div className="absolute left-0 right-0 top-2 h-3 rounded-sm border border-surface bg-gradient-to-r from-black via-gray-400 to-white" />
+                  {renderLevelHandle(
+                    'outputBlack',
+                    activeLevelsSettings.outputBlack,
+                    t('adjustments.curves.outputBlack'),
+                    true,
+                  )}
+                  {renderLevelHandle(
+                    'outputWhite',
+                    activeLevelsSettings.outputWhite,
+                    t('adjustments.curves.outputWhite'),
+                    true,
+                  )}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence initial={false}>
         {isParametricMode && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
@@ -936,7 +1301,7 @@ export default function CurveGraph({
             transition={{ duration: 0.3, ease: 'easeInOut' }}
             className="overflow-hidden origin-top"
           >
-            <div className="pt-4 pb-1 flex flex-col gap-5" onContextMenu={handleContextMenu}>
+            <div className="pt-3 pb-1 flex flex-col gap-3" onContextMenu={handleContextMenu}>
               <div className="px-1">
                 <div className="relative" ref={splitterContainerRef}>
                   <div className="h-7 rounded-md bg-surface overflow-hidden relative">

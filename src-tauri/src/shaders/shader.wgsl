@@ -115,6 +115,10 @@ struct GlobalAdjustments {
     halation_amount: f32,
     flare_amount: f32,
     sharpness_threshold: f32,
+    sharpen_radius: f32,
+    sharpen_detail: f32,
+    _pad_sharpen1: f32,
+    _pad_sharpen2: f32,
 }
 
 struct MaskAdjustments {
@@ -724,7 +728,8 @@ fn apply_local_contrast(
     amount: f32,
     is_raw: u32,
     mode: u32,
-    threshold: f32
+    threshold: f32,
+    detail: f32
 ) -> vec3<f32> {
     if (amount == 0.0) {
         return processed_color_linear;
@@ -764,11 +769,18 @@ fn apply_local_contrast(
     var effective_amount = amount;
 
     if (mode == 0u) {
+        let normalized_detail = clamp(detail, 0.0, 1.0);
+        let detail_offset = normalized_detail - 0.25;
         let edge_magnitude = abs(log_ratio);
         let normalized_edge = clamp(edge_magnitude / 3.0, 0.0, 1.0);
         let edge_dampener = 1.0 - pow(normalized_edge, 0.5);
+        let detail_gain = clamp(1.0 + detail_offset * 0.8, 0.6, 1.6);
+        let detail_edge_relief = clamp(detail_offset, 0.0, 1.0) * 0.35;
+        let detail_noise_guard = clamp(-detail_offset, 0.0, 1.0) * 0.01;
+        let adjusted_edge_dampener = mix(edge_dampener, 1.0, detail_edge_relief);
         let edge_mask = smoothstep(threshold * 0.5, threshold * 1.5, edge_magnitude);
-        effective_amount = amount * edge_dampener * edge_mask * 0.8;
+        let guarded_edge_mask = edge_mask * smoothstep(detail_noise_guard, detail_noise_guard + 0.01, edge_magnitude);
+        effective_amount = amount * adjusted_edge_dampener * guarded_edge_mask * detail_gain * 0.8;
     } else {
         effective_amount = amount;
     }
@@ -804,7 +816,7 @@ fn apply_centre_local_contrast(
     let clarity_strength = centre_amount * (2.0 * centre_mask - 1.0) * CLARITY_SCALE;
 
     if (abs(clarity_strength) > 0.001) {
-        processed_color = apply_local_contrast(processed_color, blurred_color_srgb, clarity_strength, is_raw, 1u, 0.0);
+        processed_color = apply_local_contrast(processed_color, blurred_color_srgb, clarity_strength, is_raw, 1u, 0.0, 0.25);
     }
 
     return processed_color;
@@ -1558,7 +1570,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 
     locally_contrasted_rgb = apply_local_contrast(
         locally_contrasted_rgb, sharpness_blurred,
-        t_sharpness, is_raw, 0u, adjustments.global.sharpness_threshold
+        t_sharpness, is_raw, 0u, adjustments.global.sharpness_threshold, adjustments.global.sharpen_detail
     );
 
     var sharpness_delta = vec3<f32>(0.0);
@@ -1569,7 +1581,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
             if (abs(m.sharpness) > 0.001) {
                 let local_sharp_result = apply_local_contrast(
                     initial_linear_rgb, sharpness_blurred,
-                    m.sharpness, is_raw, 0u, m.sharpness_threshold
+                    m.sharpness, is_raw, 0u, m.sharpness_threshold, adjustments.global.sharpen_detail
                 );
                 sharpness_delta += (local_sharp_result - initial_linear_rgb) * influence;
             }
@@ -1577,8 +1589,8 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     }
     locally_contrasted_rgb += sharpness_delta;
 
-    locally_contrasted_rgb = apply_local_contrast(locally_contrasted_rgb, clarity_blurred, t_clarity, is_raw, 1u, 0.0);
-    locally_contrasted_rgb = apply_local_contrast(locally_contrasted_rgb, structure_blurred, t_structure, is_raw, 1u, 0.0);
+    locally_contrasted_rgb = apply_local_contrast(locally_contrasted_rgb, clarity_blurred, t_clarity, is_raw, 1u, 0.0, 0.25);
+    locally_contrasted_rgb = apply_local_contrast(locally_contrasted_rgb, structure_blurred, t_structure, is_raw, 1u, 0.0, 0.25);
     locally_contrasted_rgb = apply_centre_local_contrast(locally_contrasted_rgb, adjustments.global.centre, absolute_coord_i, clarity_blurred, is_raw);
 
     var processed_rgb = apply_linear_exposure(locally_contrasted_rgb, t_exposure);

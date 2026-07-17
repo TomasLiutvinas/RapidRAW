@@ -209,7 +209,7 @@ export default function Controls() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-4 flex justify-between items-center shrink-0 border-b border-surface">
+      <div className="p-3 flex justify-between items-center shrink-0 border-b border-surface">
         <Text variant={TextVariants.title}>{t('editor.adjustments.title')}</Text>
         <div className="flex items-center gap-1">
           <button
@@ -271,7 +271,7 @@ export default function Controls() {
         )}
       </AnimatePresence>
 
-      <div className="grow overflow-y-scroll p-4 flex flex-col gap-2">
+      <div className="grow overflow-y-scroll p-3 flex flex-col gap-1.5">
         {Object.keys(ADJUSTMENT_SECTIONS).map((sectionName: string) => {
           const SectionComponent: any = {
             basic: BasicAdjustments,

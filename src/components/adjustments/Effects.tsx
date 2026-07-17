@@ -50,9 +50,9 @@ export default function EffectsPanel({
   const adjustmentVisibility = appSettings?.adjustmentVisibility || {};
 
   return (
-    <div className="space-y-4">
-      <div className="p-2 bg-bg-tertiary rounded-md">
-        <Text variant={TextVariants.heading} className="mb-2">
+    <div className="space-y-3">
+      <div className="p-1.5 bg-bg-tertiary rounded-md">
+        <Text variant={TextVariants.heading} className="mb-1.5">
           {t('adjustments.effects.creative')}
         </Text>
 
@@ -90,9 +90,9 @@ export default function EffectsPanel({
       </div>
 
       {!isForMask && (
-        <div className="space-y-4">
-          <div className="p-2 bg-bg-tertiary rounded-md">
-            <Text variant={TextVariants.heading} className="mb-2">
+        <div className="space-y-3">
+          <div className="p-1.5 bg-bg-tertiary rounded-md">
+            <Text variant={TextVariants.heading} className="mb-1.5">
               {t('adjustments.effects.lut')}
             </Text>
             <LUTControl
@@ -108,8 +108,8 @@ export default function EffectsPanel({
           </div>
 
           {adjustmentVisibility.vignette !== false && (
-            <div className="p-2 bg-bg-tertiary rounded-md">
-              <Text variant={TextVariants.heading} className="mb-2">
+            <div className="p-1.5 bg-bg-tertiary rounded-md">
+              <Text variant={TextVariants.heading} className="mb-1.5">
                 {t('adjustments.effects.vignette')}
               </Text>
               <Slider
@@ -156,8 +156,8 @@ export default function EffectsPanel({
           )}
 
           {adjustmentVisibility.grain !== false && (
-            <div className="p-2 bg-bg-tertiary rounded-md">
-              <Text variant={TextVariants.heading} className="mb-2">
+            <div className="p-1.5 bg-bg-tertiary rounded-md">
+              <Text variant={TextVariants.heading} className="mb-1.5">
                 {t('adjustments.effects.grain')}
               </Text>
               <Slider

@@ -1505,6 +1505,10 @@ pub struct GlobalAdjustments {
     pub halation_amount: f32,
     pub flare_amount: f32,
     pub sharpness_threshold: f32,
+    pub sharpen_radius: f32,
+    pub sharpen_detail: f32,
+    _pad_sharpen1: f32,
+    _pad_sharpen2: f32,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Pod, Zeroable, Default)]
@@ -1588,6 +1592,8 @@ struct AdjustmentScales {
     vibrance: f32,
 
     sharpness: f32,
+    sharpen_detail: f32,
+    sharpen_radius: f32,
     sharpness_threshold: f32,
     luma_noise_reduction: f32,
     color_noise_reduction: f32,
@@ -1637,6 +1643,8 @@ const SCALES: AdjustmentScales = AdjustmentScales {
     vibrance: 100.0,
 
     sharpness: 50.0,
+    sharpen_detail: 100.0,
+    sharpen_radius: 1.0,
     sharpness_threshold: 100.0,
     luma_noise_reduction: 100.0,
     color_noise_reduction: 100.0,
@@ -2320,6 +2328,15 @@ fn get_global_adjustments_from_json(
             SCALES.sharpness_threshold,
             Some(15.0),
         ),
+        sharpen_radius: get_val("details", "sharpenRadius", SCALES.sharpen_radius, Some(1.0)),
+        sharpen_detail: get_val(
+            "details",
+            "sharpenDetail",
+            SCALES.sharpen_detail,
+            Some(25.0),
+        ),
+        _pad_sharpen1: 0.0,
+        _pad_sharpen2: 0.0,
     }
 }
 
