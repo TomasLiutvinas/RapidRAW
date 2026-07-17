@@ -338,7 +338,7 @@ export default function MainLibrary(props: MainLibraryProps) {
             <AnimatePresence>
               <motion.img
                 alt="Splash screen background"
-                className="absolute inset-0 w-full h-full object-cover"
+                className="absolute inset-0 w-full h-full object-cover object-bottom"
                 key={splashImage}
                 src={splashImage}
               />
@@ -352,7 +352,7 @@ export default function MainLibrary(props: MainLibraryProps) {
                   <motion.img
                     key={splashImage + '-ambient'}
                     src={splashImage}
-                    className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-50 pointer-events-none scale-110"
+                    className="absolute inset-0 w-full h-full object-cover object-bottom blur-2xl opacity-50 pointer-events-none scale-110"
                     aria-hidden="true"
                   />
                 )}
