@@ -52,12 +52,24 @@ import { useLibraryStore } from '../store/useLibraryStore';
 import { useProcessStore } from '../store/useProcessStore';
 import { useUIStore } from '../store/useUIStore';
 import { useSettingsStore } from '../store/useSettingsStore';
-import { Invokes, Option, OPTION_SEPARATOR, Panel, AlbumItem, Album, AlbumGroup } from '../components/ui/AppProperties';
+import {
+  EditedStatus,
+  FolderMark,
+  Invokes,
+  Option,
+  OPTION_SEPARATOR,
+  Panel,
+  RawStatus,
+  AlbumItem,
+  Album,
+  AlbumGroup,
+} from '../components/ui/AppProperties';
 import { Color, COLOR_LABELS, INITIAL_ADJUSTMENTS, normalizeLoadedAdjustments } from '../utils/adjustments';
 import TaggingSubMenu from '../context/TaggingSubMenu';
 import { useEditorActions } from './useEditorActions';
 import { useLibraryActions } from './useLibraryActions';
 import { globalImageCache } from '../utils/ImageLRUCache';
+import { isSameOrSubPath, removeFolderMarksUnderPath, resolveFolderMark, setFolderMark } from '../utils/folderMarks';
 
 export interface UseAppContextMenusProps {
   handleImageSelect: (path: string) => void;
@@ -841,7 +853,7 @@ export function useAppContextMenus(props: UseAppContextMenusProps) {
         return;
       }
 
-      const { rootPaths, currentFolderPath, folderTrees, setLibrary } = useLibraryStore.getState();
+      const { rootPaths, currentFolderPath, folderTrees, setFilterCriteria, setLibrary } = useLibraryStore.getState();
       const { copiedFilePaths, setProcess } = useProcessStore.getState();
       const { appSettings, handleSettingsChange } = useSettingsStore.getState();
       const { setUI } = useUIStore.getState();
@@ -850,6 +862,24 @@ export function useAppContextMenus(props: UseAppContextMenusProps) {
       const numCopied = copiedFilePaths.length;
       const copyPastedLabel = t('contextMenus.folders.copyHere', { count: numCopied });
       const movePastedLabel = t('contextMenus.folders.moveHere', { count: numCopied });
+      const folderMarks = appSettings?.folderMarks || {};
+      const currentFolderMark = folderMarks[targetPath] || null;
+
+      const handleFolderMarkChange = (mark: FolderMark | null) => {
+        if (!appSettings) return;
+        const nextFolderMarks = setFolderMark(appSettings.folderMarks, targetPath, mark);
+        handleSettingsChange({ ...appSettings, folderMarks: nextFolderMarks });
+
+        if (currentFolderPath && isSameOrSubPath(currentFolderPath, targetPath)) {
+          const effectiveMark = resolveFolderMark(currentFolderPath, nextFolderMarks);
+          setFilterCriteria({
+            colors: [],
+            rating: 0,
+            rawStatus: effectiveMark === FolderMark.Raw ? RawStatus.RawOnly : RawStatus.All,
+            editedStatus: EditedStatus.All,
+          });
+        }
+      };
 
       const pinOption = isCurrentlyPinned
         ? {
@@ -893,7 +923,11 @@ export function useAppContextMenus(props: UseAppContextMenusProps) {
 
                   const { appSettings, handleSettingsChange } = useSettingsStore.getState();
                   if (appSettings) {
-                    const newSettings = { ...appSettings, rootFolders: newRoots } as any;
+                    const newSettings = {
+                      ...appSettings,
+                      rootFolders: newRoots,
+                      folderMarks: removeFolderMarksUnderPath(appSettings.folderMarks, targetPath),
+                    } as any;
                     if (newRoots.length === 0) {
                       newSettings.lastRootPath = null;
                       newSettings.lastFolderState = null;
@@ -913,6 +947,27 @@ export function useAppContextMenus(props: UseAppContextMenusProps) {
             ]
           : []),
         pinOption,
+        {
+          icon: Aperture,
+          label: t('contextMenus.folders.folderMark'),
+          submenu: [
+            {
+              icon: currentFolderMark === null ? Check : Folder,
+              label: t('contextMenus.folders.marks.default'),
+              onClick: () => handleFolderMarkChange(null),
+            },
+            {
+              icon: currentFolderMark === FolderMark.Raw ? Check : Aperture,
+              label: t('contextMenus.folders.marks.raw'),
+              onClick: () => handleFolderMarkChange(FolderMark.Raw),
+            },
+            {
+              icon: currentFolderMark === FolderMark.Exported ? Check : Images,
+              label: t('contextMenus.folders.marks.exported'),
+              onClick: () => handleFolderMarkChange(FolderMark.Exported),
+            },
+          ],
+        },
         { type: OPTION_SEPARATOR },
         {
           icon: FolderPlus,
@@ -1032,11 +1087,15 @@ export function useAppContextMenus(props: UseAppContextMenusProps) {
                       multiSelectedPaths: [],
                       selectionAnchorPath: null,
                     });
+                  }
 
-                    const { appSettings, handleSettingsChange } = useSettingsStore.getState();
-                    if (appSettings) {
-                      handleSettingsChange({ ...appSettings, lastFolderState: null } as any);
-                    }
+                  const { appSettings, handleSettingsChange } = useSettingsStore.getState();
+                  if (appSettings) {
+                    handleSettingsChange({
+                      ...appSettings,
+                      ...(isCurrentInTarget ? { lastFolderState: null } : {}),
+                      folderMarks: removeFolderMarksUnderPath(appSettings.folderMarks, targetPath),
+                    } as any);
                   }
 
                   props.refreshAllFolderTrees();
@@ -1059,7 +1118,7 @@ export function useAppContextMenus(props: UseAppContextMenusProps) {
       event.stopPropagation();
 
       const { setUI } = useUIStore.getState();
-      const { albumTree, setLibrary } = useLibraryStore.getState();
+      const { albumTree, targetAlbumId, setLibrary } = useLibraryStore.getState();
 
       const findParentId = (
         nodes: AlbumItem[],
@@ -1191,6 +1250,18 @@ export function useAppContextMenus(props: UseAppContextMenusProps) {
                 icon: FileEdit,
                 onClick: () => setUI({ albumActionTarget: item.id, isRenameAlbumModalOpen: true }),
               },
+              ...(item.type === 'album'
+                ? [
+                    {
+                      label:
+                        targetAlbumId === item.id
+                          ? t('contextMenus.albums.clearTargetAlbum')
+                          : t('contextMenus.albums.setTargetAlbum'),
+                      icon: targetAlbumId === item.id ? PinOff : Pin,
+                      onClick: () => setLibrary({ targetAlbumId: targetAlbumId === item.id ? null : item.id }),
+                    },
+                  ]
+                : []),
               {
                 label: t('contextMenus.folders.changeIcon'),
                 icon: Palette,
@@ -1254,6 +1325,8 @@ export function useAppContextMenus(props: UseAppContextMenusProps) {
                     isDestructive: true,
                     onClick: () => {
                       const newTree = structuredClone(albumTree);
+                      const itemContainsId = (node: AlbumItem, id: string): boolean =>
+                        node.id === id || (node.type === 'group' && node.children.some((child) => itemContainsId(child, id)));
                       const del = (nodes: AlbumItem[]) => {
                         const idx = nodes.findIndex((n) => n.id === item.id);
                         if (idx !== -1) nodes.splice(idx, 1);
@@ -1263,6 +1336,9 @@ export function useAppContextMenus(props: UseAppContextMenusProps) {
                           });
                       };
                       del(newTree);
+                      if (targetAlbumId && itemContainsId(item, targetAlbumId)) {
+                        setLibrary({ targetAlbumId: null });
+                      }
                       invoke(Invokes.SaveAlbums, { tree: newTree })
                         .then(() => invoke(Invokes.GetAlbums))
                         .then((sorted: any) => setLibrary({ albumTree: sorted }))

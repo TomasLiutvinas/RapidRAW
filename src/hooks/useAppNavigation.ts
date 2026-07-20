@@ -8,10 +8,11 @@ import { useEditorStore } from '../store/useEditorStore';
 import { useUIStore } from '../store/useUIStore';
 import { useProcessStore } from '../store/useProcessStore';
 import { useSettingsStore } from '../store/useSettingsStore';
-import { Invokes, LibraryViewMode, ImageFile } from '../components/ui/AppProperties';
+import { EditedStatus, FolderMark, Invokes, LibraryViewMode, ImageFile, RawStatus } from '../components/ui/AppProperties';
 import { INITIAL_ADJUSTMENTS, normalizeLoadedAdjustments } from '../utils/adjustments';
 import { globalImageCache } from '../utils/ImageLRUCache';
 import { debouncedSave, debouncedSetHistory } from './useEditorActions';
+import { resolveFolderMark } from '../utils/folderMarks';
 
 export interface AppNavigationProps {
   clearThumbnailQueue: () => void;
@@ -252,11 +253,18 @@ export function useAppNavigation({ clearThumbnailQueue, refs }: AppNavigationPro
     ) => {
       const { appSettings, handleSettingsChange } = useSettingsStore.getState();
       const { pinnedFolders } = appSettings || { pinnedFolders: [] };
-      const { setLibrary, sortCriteria } = useLibraryStore.getState();
+      const { setFilterCriteria, setLibrary, sortCriteria } = useLibraryStore.getState();
       const { setUI } = useUIStore.getState();
       const { setProcess } = useProcessStore.getState();
       const { selectedImage, resetHistory, setEditor } = useEditorStore.getState();
       const libraryViewMode = appSettings?.libraryViewMode;
+
+      const folderMark = resolveFolderMark(path, appSettings?.folderMarks);
+      if (folderMark === FolderMark.Raw) {
+        setFilterCriteria({ colors: [], rating: 0, rawStatus: RawStatus.RawOnly, editedStatus: EditedStatus.All });
+      } else {
+        setFilterCriteria({ colors: [], rating: 0, rawStatus: RawStatus.All, editedStatus: EditedStatus.All });
+      }
 
       if (!preserveEditor) {
         await invoke('cancel_thumbnail_generation');

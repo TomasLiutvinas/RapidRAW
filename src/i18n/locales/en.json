@@ -184,7 +184,9 @@
       "newGroup": "New Group",
       "renameAlbum": "Rename Album",
       "renameGroup": "Rename Group",
-      "rootDir": "Root Directory"
+      "rootDir": "Root Directory",
+      "clearTargetAlbum": "Clear Target Album",
+      "setTargetAlbum": "Set as Target Album"
     },
     "colors": {
       "blue": "Blue",
@@ -228,6 +230,12 @@
       "copyHere_other": "Copy {{count}} images here",
       "deleteFolder": "Delete Folder",
       "importImages": "Import Images",
+      "folderMark": "Folder Mark",
+      "marks": {
+        "default": "Default (no mark)",
+        "exported": "Exported (no filtering)",
+        "raw": "RAW source (RAW only)"
+      },
       "moveHere_one": "Move image here",
       "moveHere_other": "Move {{count}} images here",
       "newFolder": "New Folder",
@@ -759,6 +767,11 @@
         "undo": "Undo (Ctrl+Z) or History (Right-click)"
       },
       "vc": "VC"
+    },
+    "comments": {
+      "editTooltip": "Edit comment",
+      "empty": "No comment yet",
+      "toggleTooltip": "Show/hide photo comment"
     }
   },
   "export": {
@@ -947,7 +960,12 @@
         "collapse": "Collapse",
         "expand": "Expand",
         "sortFolders": "Sort Folders"
-      }
+      },
+      "marks": {
+        "exportedShort": "EXP",
+        "rawShort": "RAW"
+      },
+      "targetAlbum": "Target album"
     },
     "grid": {
       "columns": {
@@ -1434,6 +1452,18 @@
       "placeholder": "Search pictures by title...",
       "resultCount": "Showing {{total}}",
       "searchLabel": "Search pictures"
+    },
+    "quickComment": {
+      "cancel": "Cancel",
+      "close": "Close comment editor",
+      "hint": "Ctrl/⌘ + Enter to save",
+      "placeholder": "Write a short comment for this photo...",
+      "save": "Save",
+      "title": "Photo Comment"
+    },
+    "keybindMap": {
+      "close": "Close shortcut map",
+      "title": "Keyboard Shortcuts"
     }
   },
   "settings": {
@@ -1602,7 +1632,11 @@
         "zoom_in_step": "Zoom in (by step)",
         "zoom_out": "Zoom out",
         "zoom_out_step": "Zoom out (by step)",
-        "fuzzy_search": "Quick search pictures"
+        "fuzzy_search": "Quick search pictures",
+        "toggle_target_album": "Toggle target album membership",
+        "edit_photo_comment": "Edit photo comment",
+        "toggle_comment_overlay": "Show/hide photo comment",
+        "toggle_keybind_map": "Show shortcut map"
       },
       "sections": {
         "editing": "Editing",

@@ -19,6 +19,8 @@ import ImportSettingsModal from './ImportSettingsModal';
 import CullingModal from './CullingModal';
 import CollageModal from './CollageModal';
 import FuzzySearchModal from './FuzzySearchModal';
+import QuickCommentModal from './QuickCommentModal';
+import KeybindMapModal from './KeybindMapModal';
 import { AppSettings, Invokes, AlbumItem, Album, AlbumGroup } from '../ui/AppProperties';
 import { CopyPasteSettings } from '../../utils/adjustments';
 
@@ -62,6 +64,8 @@ export default function AppModals(props: AppModalsProps) {
     isImportModalOpen,
     isCopyPasteSettingsModalOpen,
     isFuzzySearchModalOpen,
+    isQuickCommentModalOpen,
+    isKeybindMapOpen,
     folderActionTarget,
     renameTargetPaths,
     importSourcePaths,
@@ -86,6 +90,8 @@ export default function AppModals(props: AppModalsProps) {
       isImportModalOpen: state.isImportModalOpen,
       isCopyPasteSettingsModalOpen: state.isCopyPasteSettingsModalOpen,
       isFuzzySearchModalOpen: state.isFuzzySearchModalOpen,
+      isQuickCommentModalOpen: state.isQuickCommentModalOpen,
+      isKeybindMapOpen: state.isKeybindMapOpen,
       folderActionTarget: state.folderActionTarget,
       renameTargetPaths: state.renameTargetPaths,
       importSourcePaths: state.importSourcePaths,
@@ -159,6 +165,8 @@ export default function AppModals(props: AppModalsProps) {
         selectedPath={selectedImage?.path || libraryActivePath}
         thumbnails={thumbnails}
       />
+      <QuickCommentModal isOpen={isQuickCommentModalOpen} onClose={() => setUI({ isQuickCommentModalOpen: false })} />
+      <KeybindMapModal isOpen={isKeybindMapOpen} onClose={() => setUI({ isKeybindMapOpen: false })} />
       <CopyPasteSettingsModal
         isOpen={isCopyPasteSettingsModalOpen}
         onClose={() => setUI({ isCopyPasteSettingsModalOpen: false })}

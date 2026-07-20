@@ -2376,6 +2376,7 @@ pub fn run() {
             file_management::move_files,
             file_management::rename_folder,
             file_management::rename_files,
+            file_management::reorder_files_by_name,
             file_management::duplicate_file,
             file_management::show_in_finder,
             file_management::delete_files_from_disk,
