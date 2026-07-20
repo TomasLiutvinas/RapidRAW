@@ -10,6 +10,85 @@ import { useSettingsStore } from '../store/useSettingsStore';
 import { computeSortedLibrary } from './useSortedLibrary';
 
 export function useLibraryActions(handleImageSelect?: (path: string) => void) {
+  const handleToggleTargetAlbumMembership = useCallback(async (paths?: string[]) => {
+    const libraryState = useLibraryStore.getState();
+    const { targetAlbumId, albumTree, multiSelectedPaths, libraryActivePath, activeAlbumId, setLibrary } = libraryState;
+    const { selectedImage } = useEditorStore.getState();
+
+    if (!targetAlbumId) {
+      toast.info('Set a target album first. Right-click an album and choose “Set as Target Album”.');
+      return;
+    }
+
+    const pathsToToggle =
+      paths && paths.length > 0
+        ? paths
+        : selectedImage
+          ? [selectedImage.path]
+          : multiSelectedPaths.length > 0
+            ? multiSelectedPaths
+            : libraryActivePath
+              ? [libraryActivePath]
+              : [];
+
+    if (pathsToToggle.length === 0) return;
+
+    const findAlbum = (nodes: AlbumItem[], albumId: string): Album | null => {
+      for (const node of nodes) {
+        if (node.id === albumId && node.type === 'album') return node as Album;
+        if (node.type === 'group') {
+          const found = findAlbum((node as AlbumGroup).children, albumId);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const newTree = structuredClone(albumTree);
+    const targetAlbum = findAlbum(newTree, targetAlbumId);
+
+    if (!targetAlbum) {
+      setLibrary({ targetAlbumId: null });
+      toast.error('Target album no longer exists. Choose a new target album.');
+      return;
+    }
+
+    const targetPaths = new Set(targetAlbum.images);
+    const allSelectedAlreadyInAlbum = pathsToToggle.every((path) => targetPaths.has(path));
+
+    if (allSelectedAlreadyInAlbum) {
+      const pathsToRemove = new Set(pathsToToggle);
+      targetAlbum.images = targetAlbum.images.filter((path) => !pathsToRemove.has(path));
+    } else {
+      targetAlbum.images = Array.from(new Set([...targetAlbum.images, ...pathsToToggle]));
+    }
+
+    try {
+      await invoke(Invokes.SaveAlbums, { tree: newTree });
+      const sortedTree = await invoke<AlbumItem[]>(Invokes.GetAlbums);
+      const updates: Partial<typeof libraryState> = { albumTree: sortedTree };
+
+      if (activeAlbumId === targetAlbumId) {
+        const refreshedImages = await invoke<ImageFile[]>(Invokes.GetAlbumImages, { paths: targetAlbum.images });
+        const refreshedPathSet = new Set(refreshedImages.map((image) => image.path));
+        updates.imageList = refreshedImages;
+        updates.multiSelectedPaths = multiSelectedPaths.filter((path) => refreshedPathSet.has(path));
+        if (libraryActivePath && !refreshedPathSet.has(libraryActivePath)) {
+          updates.libraryActivePath = refreshedImages[0]?.path ?? null;
+        }
+      }
+
+      updates.targetAlbumFeedback = {
+        action: allSelectedAlreadyInAlbum ? 'removed' : 'added',
+        albumId: targetAlbumId,
+        token: Date.now(),
+      };
+      setLibrary(updates);
+    } catch (err) {
+      toast.error(`Failed to update target album: ${err}`);
+    }
+  }, []);
+
   const handleRate = useCallback((newRating: number, paths?: string[]) => {
     const { multiSelectedPaths, imageRatings, setLibrary } = useLibraryStore.getState();
     const { selectedImage } = useEditorStore.getState();
@@ -396,5 +475,6 @@ export function useLibraryActions(handleImageSelect?: (path: string) => void) {
     handleTogglePinFolder,
     handleCreateAlbumItem,
     handleRenameAlbumItem,
+    handleToggleTargetAlbumMembership,
   };
 }

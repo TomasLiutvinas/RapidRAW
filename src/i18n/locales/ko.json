@@ -177,7 +177,9 @@
       "newGroup": "새 그룹",
       "renameAlbum": "앨범 이름 변경",
       "renameGroup": "그룹 이름 변경",
-      "rootDir": "루트 디렉터리"
+      "rootDir": "루트 디렉터리",
+      "clearTargetAlbum": "Clear Target Album",
+      "setTargetAlbum": "Set as Target Album"
     },
     "colors": {
       "blue": "파랑",
@@ -221,6 +223,12 @@
       "copyHere_other": "여기에 이미지 {{count}}개 복사",
       "deleteFolder": "폴더 삭제",
       "importImages": "이미지 가져오기",
+      "folderMark": "Folder Mark",
+      "marks": {
+        "default": "Default (no mark)",
+        "exported": "Exported (no filtering)",
+        "raw": "RAW source (RAW only)"
+      },
       "moveHere_one": "여기로 이미지 이동",
       "moveHere_other": "여기로 이미지 {{count}}개 이동",
       "newFolder": "새 폴더",
@@ -737,6 +745,11 @@
         "undo": "실행 취소 (Ctrl+Z) 또는 기록 (우클릭)"
       },
       "vc": "VC"
+    },
+    "comments": {
+      "editTooltip": "Edit comment",
+      "empty": "No comment yet",
+      "toggleTooltip": "Show/hide photo comment"
     }
   },
   "export": {
@@ -899,7 +912,12 @@
         "collapse": "접기",
         "expand": "펼치기",
         "sortFolders": "폴더 정렬"
-      }
+      },
+      "marks": {
+        "exportedShort": "EXP",
+        "rawShort": "RAW"
+      },
+      "targetAlbum": "Target album"
     },
     "grid": {
       "columns": {
@@ -1360,6 +1378,18 @@
       "placeholder": "Search pictures by title...",
       "resultCount": "Showing {{total}}",
       "searchLabel": "Search pictures"
+    },
+    "quickComment": {
+      "cancel": "Cancel",
+      "close": "Close comment editor",
+      "hint": "Ctrl/⌘ + Enter to save",
+      "placeholder": "Write a short comment for this photo...",
+      "save": "Save",
+      "title": "Photo Comment"
+    },
+    "keybindMap": {
+      "close": "Close shortcut map",
+      "title": "Keyboard Shortcuts"
     }
   },
   "settings": {
@@ -1512,7 +1542,11 @@
         "zoom_in": "확대",
         "zoom_in_step": "확대 (단계별)",
         "zoom_out": "축소",
-        "zoom_out_step": "축소 (단계별)"
+        "zoom_out_step": "축소 (단계별)",
+        "toggle_target_album": "Toggle target album membership",
+        "edit_photo_comment": "Edit photo comment",
+        "toggle_comment_overlay": "Show/hide photo comment",
+        "toggle_keybind_map": "Show shortcut map"
       },
       "sections": {
         "editing": "편집",

@@ -3625,6 +3625,199 @@ pub fn rename_files(
     Ok(final_new_paths)
 }
 
+#[derive(Serialize)]
+pub struct ReorderFilesByNameResult {
+    pub renames: HashMap<String, String>,
+    pub ordered_paths: Vec<String>,
+}
+
+fn strip_rapidraw_order_prefix(file_name: &str) -> String {
+    let re = Regex::new(r"^RR_\d{8}__(.+)$").unwrap();
+    re.captures(file_name)
+        .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()))
+        .unwrap_or_else(|| file_name.to_string())
+}
+
+fn add_existing_sidecar_operation(
+    operations: &mut Vec<(PathBuf, PathBuf)>,
+    old_path: PathBuf,
+    new_path: PathBuf,
+) {
+    if old_path.exists() && old_path != new_path {
+        operations.push((old_path, new_path));
+    }
+}
+
+#[tauri::command]
+pub fn reorder_files_by_name(
+    ordered_paths: Vec<String>,
+    app_handle: AppHandle,
+) -> Result<ReorderFilesByNameResult, String> {
+    if ordered_paths.is_empty() {
+        return Ok(ReorderFilesByNameResult {
+            renames: HashMap::new(),
+            ordered_paths: Vec::new(),
+        });
+    }
+
+    let mut image_operations: Vec<(PathBuf, PathBuf)> = Vec::new();
+    let mut target_order = Vec::with_capacity(ordered_paths.len());
+    let mut seen_sources = HashSet::new();
+    let mut shared_parent: Option<PathBuf> = None;
+
+    for (index, path_str) in ordered_paths.iter().enumerate() {
+        if path_str.contains("?vc=") {
+            return Err("Filename order mode cannot rename virtual copies. Select the base file instead.".to_string());
+        }
+
+        let original_path = PathBuf::from(path_str);
+        if !original_path.exists() {
+            return Err(format!("File not found: {}", path_str));
+        }
+        if !is_supported_image_file(&original_path) {
+            return Err(format!("Not a supported image file: {}", path_str));
+        }
+        if !seen_sources.insert(original_path.clone()) {
+            return Err(format!("Duplicate path in reorder request: {}", path_str));
+        }
+
+        let parent = original_path
+            .parent()
+            .ok_or("Could not get parent directory")?
+            .to_path_buf();
+        if let Some(existing_parent) = &shared_parent {
+            if existing_parent != &parent {
+                return Err("Filename order mode only supports files from one folder at a time.".to_string());
+            }
+        } else {
+            shared_parent = Some(parent.clone());
+        }
+
+        let original_file_name = original_path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .ok_or("Could not read filename")?;
+        let clean_file_name = strip_rapidraw_order_prefix(original_file_name);
+        let target_file_name = format!("RR_{:08}__{}", (index + 1) * 1000, clean_file_name);
+        let target_path = parent.join(target_file_name);
+
+        target_order.push(target_path.to_string_lossy().into_owned());
+        if original_path != target_path {
+            image_operations.push((original_path, target_path));
+        }
+    }
+
+    let mut operations = image_operations.clone();
+    for (original_path, new_path) in &image_operations {
+        let parent = original_path
+            .parent()
+            .ok_or("Could not get parent directory")?;
+        let original_filename = original_path.file_name().unwrap().to_string_lossy();
+        let new_filename = new_path.file_name().unwrap().to_string_lossy();
+
+        if let Ok(entries) = fs::read_dir(parent) {
+            for entry in entries.filter_map(Result::ok) {
+                let entry_path = entry.path();
+                let entry_filename = entry.file_name().to_string_lossy().to_string();
+                if entry_filename.starts_with(&format!("{}.", original_filename))
+                    && entry_filename.ends_with(".rrdata")
+                {
+                    let new_sidecar_filename = entry_filename.replacen(&*original_filename, &new_filename, 1);
+                    operations.push((entry_path, parent.join(new_sidecar_filename)));
+                } else if entry_filename == format!("{}.rrdata", original_filename) {
+                    let mut new_sidecar_name = new_path.file_name().unwrap().to_os_string();
+                    new_sidecar_name.push(".rrdata");
+                    operations.push((entry_path, new_path.with_file_name(new_sidecar_name)));
+                }
+            }
+        }
+
+        let mut old_rrexif_name = original_path.file_name().unwrap().to_os_string();
+        old_rrexif_name.push(".rrexif");
+        let mut new_rrexif_name = new_path.file_name().unwrap().to_os_string();
+        new_rrexif_name.push(".rrexif");
+        add_existing_sidecar_operation(
+            &mut operations,
+            original_path.with_file_name(old_rrexif_name),
+            new_path.with_file_name(new_rrexif_name),
+        );
+
+        if let (Some(old_stem), Some(new_stem)) = (original_path.file_stem(), new_path.file_stem()) {
+            add_existing_sidecar_operation(
+                &mut operations,
+                original_path.with_file_name(format!("{}.xmp", old_stem.to_string_lossy())),
+                new_path.with_file_name(format!("{}.xmp", new_stem.to_string_lossy())),
+            );
+            add_existing_sidecar_operation(
+                &mut operations,
+                original_path.with_file_name(format!("{}.XMP", old_stem.to_string_lossy())),
+                new_path.with_file_name(format!("{}.XMP", new_stem.to_string_lossy())),
+            );
+        }
+    }
+
+    let source_set: HashSet<PathBuf> = operations.iter().map(|(old, _)| old.clone()).collect();
+    let mut target_set = HashSet::new();
+    for (_, new_path) in &operations {
+        if !target_set.insert(new_path.clone()) {
+            return Err(format!("Duplicate target filename: {}", new_path.display()));
+        }
+        if new_path.exists() && !source_set.contains(new_path) {
+            return Err(format!(
+                "A file with the name {} already exists.",
+                new_path.display()
+            ));
+        }
+    }
+
+    let uuid = Uuid::new_v4();
+    let mut temp_operations: Vec<(PathBuf, PathBuf, PathBuf)> = Vec::with_capacity(operations.len());
+    for (index, (old_path, new_path)) in operations.iter().enumerate() {
+        let temp_path = old_path.with_file_name(format!(".rapidraw-reorder-{}-{}.tmp", uuid, index));
+        fs::rename(old_path, &temp_path).map_err(|e| {
+            format!(
+                "Failed to prepare rename {}: {}",
+                old_path.display(),
+                e
+            )
+        })?;
+        temp_operations.push((temp_path, old_path.clone(), new_path.clone()));
+    }
+
+    for (temp_path, old_path, new_path) in &temp_operations {
+        fs::rename(temp_path, new_path).map_err(|e| {
+            for (rollback_temp, rollback_old, _) in &temp_operations {
+                if rollback_temp.exists() {
+                    let _ = fs::rename(rollback_temp, rollback_old);
+                }
+            }
+            format!(
+                "Failed to rename {} to {}: {}",
+                old_path.display(),
+                new_path.display(),
+                e
+            )
+        })?;
+    }
+
+    let renames: HashMap<String, String> = image_operations
+        .into_iter()
+        .map(|(old_path, new_path)| {
+            (
+                old_path.to_string_lossy().into_owned(),
+                new_path.to_string_lossy().into_owned(),
+            )
+        })
+        .collect();
+
+    sync_album_path_changes(&app_handle, Some(&renames), None, None);
+
+    Ok(ReorderFilesByNameResult {
+        renames,
+        ordered_paths: target_order,
+    })
+}
+
 #[tauri::command]
 pub fn create_virtual_copy(
     source_virtual_path: String,

@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect, useImperativeHandle } from 'react';
 import { Crop, PercentCrop } from 'react-image-crop';
-import { Loader2 } from 'lucide-react';
+import { Loader2, MessageSquare, Pencil } from 'lucide-react';
 import clsx from 'clsx';
 import { invoke } from '@tauri-apps/api/core';
 import { toast } from 'react-toastify';
 import debounce from 'lodash.debounce';
+import { useTranslation } from 'react-i18next';
 
 import { ImageDimensions, useImageRenderSize } from '../../hooks/useImageRenderSize';
 import { Adjustments, AiPatch, MaskContainer } from '../../utils/adjustments';
@@ -76,11 +77,13 @@ interface EditorProps {
 }
 
 export default function Editor({ onBackToLibrary, onContextMenu, transformWrapperRef }: EditorProps) {
+  const { t } = useTranslation();
   const appSettings = useSettingsStore((s) => s.appSettings);
   const osPlatform = useSettingsStore((s) => s.osPlatform);
   const isFullScreen = useUIStore((s) => s.isFullScreen);
   const activeRightPanel = useUIStore((s) => s.activeRightPanel);
   const isInstantTransition = useUIStore((s) => s.isInstantTransition);
+  const isCommentOverlayVisible = useUIStore((s) => s.isCommentOverlayVisible);
   const setUI = useUIStore((s) => s.setUI);
   const isLoading = useLibraryStore((s) => s.isViewLoading);
   const selectedImage = useEditorStore((s) => s.selectedImage);
@@ -1974,6 +1977,7 @@ export default function Editor({ onBackToLibrary, onContextMenu, transformWrappe
   }
 
   const isWgpuActive = appSettings?.useWgpuRenderer !== false && hasRenderedFirstFrame;
+  const photoComment = String(selectedImage.exif?.UserComment || '').trim();
 
   return (
     <div
@@ -2098,6 +2102,44 @@ export default function Editor({ onBackToLibrary, onContextMenu, transformWrappe
             transformState={transformState}
             hasRenderedFirstFrame={hasRenderedFirstFrame}
           />
+        </div>
+
+        <div className="absolute left-4 bottom-4 z-20 flex max-w-[min(36rem,calc(100%-2rem))] items-end gap-2 pointer-events-none">
+          <button
+            className={clsx(
+              'pointer-events-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border-color bg-surface/90 text-text-secondary shadow-lg backdrop-blur-md transition-colors hover:text-text-primary',
+              isCommentOverlayVisible && 'text-accent',
+            )}
+            data-tooltip={t('editor.comments.toggleTooltip')}
+            onClick={(event) => {
+              event.stopPropagation();
+              setUI((state) => ({ isCommentOverlayVisible: !state.isCommentOverlayVisible }));
+            }}
+            type="button"
+          >
+            <MessageSquare size={16} />
+          </button>
+
+          {isCommentOverlayVisible && (
+            <div className="pointer-events-auto rounded-xl border border-border-color bg-surface/90 px-3 py-2 text-sm text-text-primary shadow-xl backdrop-blur-md">
+              <div className="flex items-start gap-3">
+                <p className={clsx('line-clamp-4 min-w-0 whitespace-pre-wrap', !photoComment && 'text-text-secondary italic')}>
+                  {photoComment || t('editor.comments.empty')}
+                </p>
+                <button
+                  className="shrink-0 rounded-md p-1 text-text-secondary transition-colors hover:bg-bg-primary hover:text-text-primary"
+                  data-tooltip={t('editor.comments.editTooltip')}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setUI({ isQuickCommentModalOpen: true });
+                  }}
+                  type="button"
+                >
+                  <Pencil size={14} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

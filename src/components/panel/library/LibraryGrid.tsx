@@ -172,7 +172,7 @@ export default function LibraryGrid(props: any) {
     thumbnailSizeOptions,
     onThumbnailSizeChange,
   } = props;
-  const { listColumnWidths, setLibrary, sortCriteria, setSortCriteria } = useLibraryStore();
+  const { filenameOrderMode, listColumnWidths, setLibrary, sortCriteria, setSortCriteria } = useLibraryStore();
   const [gridSize, setGridSize] = useState({ height: 0, width: 0 });
   const [listHandle, setListHandle] = useListCallbackRef();
   const [collapsedRecursiveFolders, setCollapsedRecursiveFolders] = useState<Set<string>>(new Set());
@@ -370,10 +370,16 @@ export default function LibraryGrid(props: any) {
     }
   }, [listHandle, currentFolderPath]);
 
+  useEffect(() => {
+    if (gridData?.columnCount) {
+      setLibrary({ libraryColumnCount: gridData.columnCount });
+    }
+  }, [gridData?.columnCount, setLibrary]);
+
   const prevActivePath = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!listHandle?.element || !gridData || multiSelectedPaths.length > 1) {
+    if (!listHandle?.element || !gridData) {
       prevActivePath.current = activePath;
       return;
     }
@@ -423,16 +429,16 @@ export default function LibraryGrid(props: any) {
       if (itemBottom > scrollTop + clientHeight) {
         element.scrollTo({
           top: itemBottom - clientHeight + SCROLL_OFFSET,
-          behavior: 'smooth',
+          behavior: filenameOrderMode ? 'auto' : 'smooth',
         });
       } else if (targetTop < scrollTop) {
         element.scrollTo({
           top: Math.max(0, targetTop - SCROLL_OFFSET),
-          behavior: 'smooth',
+          behavior: filenameOrderMode ? 'auto' : 'smooth',
         });
       }
     }
-  }, [activePath, gridData, multiSelectedPaths.length, listHandle, libraryViewMode]);
+  }, [activePath, filenameOrderMode, gridData, multiSelectedPaths.length, listHandle, libraryViewMode]);
 
   const memoizedRowProps = useMemo(() => {
     if (!gridData) return {};

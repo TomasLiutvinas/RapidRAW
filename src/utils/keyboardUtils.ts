@@ -32,6 +32,30 @@ export const KEYBIND_DEFINITIONS: KeybindDefinition[] = [
     section: 'library',
   },
   {
+    action: 'toggle_target_album',
+    description: 'settings.keybinds.actions.toggle_target_album',
+    defaultCombo: ['KeyQ'],
+    section: 'library',
+  },
+  {
+    action: 'toggle_comment_overlay',
+    description: 'settings.keybinds.actions.toggle_comment_overlay',
+    defaultCombo: ['KeyC'],
+    section: 'library',
+  },
+  {
+    action: 'edit_photo_comment',
+    description: 'settings.keybinds.actions.edit_photo_comment',
+    defaultCombo: ['KeyN'],
+    section: 'library',
+  },
+  {
+    action: 'toggle_keybind_map',
+    description: 'settings.keybinds.actions.toggle_keybind_map',
+    defaultCombo: ['shift', 'Slash'],
+    section: 'library',
+  },
+  {
     action: 'copy_files',
     description: 'settings.keybinds.actions.copy_files',
     defaultCombo: ['ctrl', 'shift', 'KeyC'],

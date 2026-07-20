@@ -177,7 +177,9 @@
       "newGroup": "Nouveau groupe",
       "renameAlbum": "Renommer l'album",
       "renameGroup": "Renommer le groupe",
-      "rootDir": "Répertoire racine"
+      "rootDir": "Répertoire racine",
+      "clearTargetAlbum": "Clear Target Album",
+      "setTargetAlbum": "Set as Target Album"
     },
     "colors": {
       "blue": "Bleu",
@@ -221,6 +223,12 @@
       "copyHere_other": "Copier {{count}} images ici",
       "deleteFolder": "Supprimer le dossier",
       "importImages": "Importer des images",
+      "folderMark": "Folder Mark",
+      "marks": {
+        "default": "Default (no mark)",
+        "exported": "Exported (no filtering)",
+        "raw": "RAW source (RAW only)"
+      },
       "moveHere_one": "Déplacer l'image ici",
       "moveHere_other": "Déplacer {{count}} images ici",
       "newFolder": "Nouveau dossier",
@@ -737,6 +745,11 @@
         "undo": "Annuler (Ctrl+Z) ou Historique (Clic-droit)"
       },
       "vc": "CV"
+    },
+    "comments": {
+      "editTooltip": "Edit comment",
+      "empty": "No comment yet",
+      "toggleTooltip": "Show/hide photo comment"
     }
   },
   "export": {
@@ -899,7 +912,12 @@
         "collapse": "Réduire",
         "expand": "Développer",
         "sortFolders": "Trier les dossiers"
-      }
+      },
+      "marks": {
+        "exportedShort": "EXP",
+        "rawShort": "RAW"
+      },
+      "targetAlbum": "Target album"
     },
     "grid": {
       "columns": {
@@ -1360,6 +1378,18 @@
       "placeholder": "Search pictures by title...",
       "resultCount": "Showing {{total}}",
       "searchLabel": "Search pictures"
+    },
+    "quickComment": {
+      "cancel": "Cancel",
+      "close": "Close comment editor",
+      "hint": "Ctrl/⌘ + Enter to save",
+      "placeholder": "Write a short comment for this photo...",
+      "save": "Save",
+      "title": "Photo Comment"
+    },
+    "keybindMap": {
+      "close": "Close shortcut map",
+      "title": "Keyboard Shortcuts"
     }
   },
   "settings": {
@@ -1512,7 +1542,11 @@
         "zoom_in": "Zoom avant",
         "zoom_in_step": "Zoom avant (par palier)",
         "zoom_out": "Zoom arrière",
-        "zoom_out_step": "Zoom arrière (par palier)"
+        "zoom_out_step": "Zoom arrière (par palier)",
+        "toggle_target_album": "Toggle target album membership",
+        "edit_photo_comment": "Edit photo comment",
+        "toggle_comment_overlay": "Show/hide photo comment",
+        "toggle_keybind_map": "Show shortcut map"
       },
       "sections": {
         "editing": "Retouche",

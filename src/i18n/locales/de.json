@@ -177,7 +177,9 @@
       "newGroup": "Neue Gruppe",
       "renameAlbum": "Album umbenennen",
       "renameGroup": "Gruppe umbenennen",
-      "rootDir": "Stammverzeichnis"
+      "rootDir": "Stammverzeichnis",
+      "clearTargetAlbum": "Clear Target Album",
+      "setTargetAlbum": "Set as Target Album"
     },
     "colors": {
       "blue": "Blau",
@@ -221,6 +223,12 @@
       "copyHere_other": "{{count}} Bilder hierher kopieren",
       "deleteFolder": "Ordner löschen",
       "importImages": "Bilder importieren",
+      "folderMark": "Folder Mark",
+      "marks": {
+        "default": "Default (no mark)",
+        "exported": "Exported (no filtering)",
+        "raw": "RAW source (RAW only)"
+      },
       "moveHere_one": "Bild hierher verschieben",
       "moveHere_other": "{{count}} Bilder hierher verschieben",
       "newFolder": "Neuer Ordner",
@@ -737,6 +745,11 @@
         "undo": "Rückgängig (Strg+Z) oder Verlauf (Rechtsklick)"
       },
       "vc": "VK"
+    },
+    "comments": {
+      "editTooltip": "Edit comment",
+      "empty": "No comment yet",
+      "toggleTooltip": "Show/hide photo comment"
     }
   },
   "export": {
@@ -899,7 +912,12 @@
         "collapse": "Zuklappen",
         "expand": "Aufklappen",
         "sortFolders": "Ordner sortieren"
-      }
+      },
+      "marks": {
+        "exportedShort": "EXP",
+        "rawShort": "RAW"
+      },
+      "targetAlbum": "Target album"
     },
     "grid": {
       "columns": {
@@ -1360,6 +1378,18 @@
       "placeholder": "Search pictures by title...",
       "resultCount": "Showing {{total}}",
       "searchLabel": "Search pictures"
+    },
+    "quickComment": {
+      "cancel": "Cancel",
+      "close": "Close comment editor",
+      "hint": "Ctrl/⌘ + Enter to save",
+      "placeholder": "Write a short comment for this photo...",
+      "save": "Save",
+      "title": "Photo Comment"
+    },
+    "keybindMap": {
+      "close": "Close shortcut map",
+      "title": "Keyboard Shortcuts"
     }
   },
   "settings": {
@@ -1512,7 +1542,11 @@
         "zoom_in": "Vergrößern",
         "zoom_in_step": "Vergrößern (schrittweise)",
         "zoom_out": "Verkleinern",
-        "zoom_out_step": "Verkleinern (schrittweise)"
+        "zoom_out_step": "Verkleinern (schrittweise)",
+        "toggle_target_album": "Toggle target album membership",
+        "edit_photo_comment": "Edit photo comment",
+        "toggle_comment_overlay": "Show/hide photo comment",
+        "toggle_keybind_map": "Show shortcut map"
       },
       "sections": {
         "editing": "Bearbeitung",

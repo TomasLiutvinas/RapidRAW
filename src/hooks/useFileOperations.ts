@@ -9,6 +9,7 @@ import { useProcessStore } from '../store/useProcessStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { Invokes } from '../components/ui/AppProperties';
 import { Status } from '../components/ui/ExportImportProperties';
+import { remapFolderMarksForRename } from '../utils/folderMarks';
 
 export function useFileOperations(
   refreshImageList: () => Promise<void>,
@@ -191,6 +192,11 @@ export function useFileOperations(
               .map((p: string) => (p === oldPath ? newPath : p))
               .sort((a: string, b: string) => a.localeCompare(b));
             newAppSettings.pinnedFolders = newPins;
+            settingsChanged = true;
+          }
+
+          if (appSettings?.folderMarks) {
+            newAppSettings.folderMarks = remapFolderMarksForRename(appSettings.folderMarks, oldPath, newPath);
             settingsChanged = true;
           }
 

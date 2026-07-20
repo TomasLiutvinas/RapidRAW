@@ -30,9 +30,9 @@ import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
 import Text from '../ui/Text';
 import { TEXT_COLOR_KEYS, TextColors, TextVariants, TextWeights } from '../../types/typography';
-import { useLibraryStore } from '../../store/useLibraryStore';
+import { TargetAlbumFeedback, useLibraryStore } from '../../store/useLibraryStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
-import { AlbumItem, AlbumGroup, Album, Invokes, FolderTreeSort, SortDirection } from '../ui/AppProperties';
+import { AlbumItem, AlbumGroup, Album, Invokes, FolderTreeSort, SortDirection, FolderMark } from '../ui/AppProperties';
 
 export interface FolderTree {
   children: FolderTree[];
@@ -71,6 +71,7 @@ interface TreeNodeProps {
   showImageCounts: boolean;
   isInstantTransition: boolean;
   folderIcons: Record<string, string>;
+  folderMarks: Record<string, FolderMark>;
 }
 
 interface VisibleProps {
@@ -319,6 +320,8 @@ function AlbumTreeNode({
   onSelectAlbum,
   onContextMenu,
   selectedAlbumId,
+  targetAlbumId,
+  targetAlbumFeedback,
   showImageCounts,
 }: {
   item: AlbumItem;
@@ -327,11 +330,15 @@ function AlbumTreeNode({
   onSelectAlbum: (id: string, name: string, images: string[]) => void;
   onContextMenu: (e: any, item: AlbumItem) => void;
   selectedAlbumId: string | null;
+  targetAlbumId: string | null;
+  targetAlbumFeedback: TargetAlbumFeedback | null;
   showImageCounts: boolean;
 }) {
   const isGroup = item.type === 'group';
   const isExpanded = expandedGroups.has(item.id);
   const isSelected = item.id === selectedAlbumId;
+  const isTarget = item.id === targetAlbumId;
+  const targetFeedback = isTarget && targetAlbumFeedback?.albumId === item.id ? targetAlbumFeedback : null;
   const imageCount = getAlbumImageCount(item);
 
   let ItemIcon = isGroup ? (isExpanded ? FolderOpen : Folder) : AlbumIcon;
@@ -343,13 +350,28 @@ function AlbumTreeNode({
   return (
     <Text as="div" color={TextColors.primary} weight={TextWeights.medium}>
       <div
-        className={clsx('flex items-center gap-2 p-1.5 rounded-md transition-colors cursor-pointer', {
+        className={clsx('relative flex items-center gap-2 overflow-hidden p-1.5 rounded-md transition-colors cursor-pointer', {
           'bg-surface': isSelected,
           'hover:bg-card-active': !isSelected,
         })}
         onClick={() => (isGroup ? onToggle(item.id) : onSelectAlbum(item.id, item.name, (item as Album).images))}
         onContextMenu={(e) => onContextMenu(e, item)}
       >
+        <AnimatePresence initial={false}>
+          {targetFeedback && (
+            <motion.div
+              animate={{ opacity: [0.28, 0], scale: [0.98, 1.02] }}
+              className={clsx(
+                'pointer-events-none absolute inset-0 rounded-md',
+                targetFeedback.action === 'added' ? 'bg-green-500' : 'bg-red-500',
+              )}
+              exit={{ opacity: 0 }}
+              initial={{ opacity: 0, scale: 0.98 }}
+              key={targetFeedback.token}
+              transition={{ duration: 0.45, ease: 'easeOut' }}
+            />
+          )}
+        </AnimatePresence>
         <div className="relative w-5 h-5 flex items-center justify-center p-0.5 rounded-sm text-text-secondary shrink-0">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
@@ -381,6 +403,12 @@ function AlbumTreeNode({
             </Text>
           )}
         </span>
+
+        {isTarget && !isGroup && (
+          <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-accent text-button-text">
+            <Check size={11} />
+          </span>
+        )}
 
         {isGroup && (
           <div
@@ -420,6 +448,8 @@ function AlbumTreeNode({
                       onSelectAlbum={onSelectAlbum}
                       onContextMenu={onContextMenu}
                       selectedAlbumId={selectedAlbumId}
+                      targetAlbumId={targetAlbumId}
+                      targetAlbumFeedback={targetAlbumFeedback}
                       showImageCounts={showImageCounts}
                     />
                   </motion.div>
@@ -445,7 +475,9 @@ function TreeNode({
   showImageCounts,
   isInstantTransition,
   folderIcons,
+  folderMarks,
 }: TreeNodeProps) {
+  const { t } = useTranslation();
   const hasChildren = node.hasSubdirs || (node.children && node.children.length > 0);
   const isSelected = node.path === selectedPath;
   const isPinned = pinnedFolders.includes(node.path);
@@ -493,6 +525,7 @@ function TreeNode({
     ResolvedIcon = ALBUM_ICONS[currentFolderIconKey];
   }
   const iconKey = currentFolderIconKey || (isExpanded ? 'folder-open' : 'folder-closed');
+  const currentFolderMark = folderMarks[node.path];
 
   return (
     <Text as="div" color={TextColors.primary} weight={TextWeights.medium}>
@@ -530,6 +563,20 @@ function TreeNode({
 
         <span onDoubleClick={handleNameDoubleClick} className="truncate select-none flex-1">
           <span className="truncate">{node.name}</span>
+          {currentFolderMark && (
+            <span
+              className={clsx(
+                'inline-block ml-1 px-1.5 py-0.5 rounded-sm text-[9px] font-semibold leading-none align-middle',
+                currentFolderMark === FolderMark.Raw
+                  ? 'bg-accent/15 text-accent'
+                  : 'bg-text-secondary/15 text-text-secondary',
+              )}
+            >
+              {currentFolderMark === FolderMark.Raw
+                ? t('library.folders.marks.rawShort')
+                : t('library.folders.marks.exportedShort')}
+            </span>
+          )}
           {typeof node.imageCount === 'number' && node.imageCount > 0 && (
             <Text
               as="span"
@@ -592,6 +639,7 @@ function TreeNode({
                       showImageCounts={showImageCounts}
                       isInstantTransition={isInstantTransition}
                       folderIcons={folderIcons}
+                      folderMarks={folderMarks}
                     />
                   </motion.div>
                 ))}
@@ -627,6 +675,8 @@ export default function FolderTree({
     isTreeLoading: isLoading,
     albumTree,
     activeAlbumId,
+    targetAlbumId,
+    targetAlbumFeedback,
     expandedAlbumGroups,
   } = useLibraryStore();
 
@@ -637,6 +687,7 @@ export default function FolderTree({
   const openSections = appSettings?.openTreeSections ?? ['current'];
   const showImageCounts = appSettings?.enableFolderImageCounts ?? false;
   const folderIcons = appSettings?.folderIcons || {};
+  const folderMarks = appSettings?.folderMarks || {};
   const folderTreeSort: FolderTreeSort = appSettings?.folderTreeSort || { key: 'name', order: SortDirection.Ascending };
   const showHeaderButtons = isHovering || isSortMenuOpen;
 
@@ -903,6 +954,7 @@ export default function FolderTree({
                                 showImageCounts={showImageCounts && isHovering}
                                 isInstantTransition={isInstantTransition}
                                 folderIcons={folderIcons}
+                                folderMarks={folderMarks}
                               />
                             </motion.div>
                           ))}
@@ -954,6 +1006,8 @@ export default function FolderTree({
                                 onSelectAlbum={onSelectAlbum}
                                 onContextMenu={onAlbumContextMenu}
                                 selectedAlbumId={activeAlbumId}
+                                targetAlbumId={targetAlbumId}
+                                targetAlbumFeedback={targetAlbumFeedback}
                                 showImageCounts={showImageCounts && isHovering}
                               />
                             </motion.div>
@@ -1023,6 +1077,7 @@ export default function FolderTree({
                                 showImageCounts={showImageCounts && isHovering}
                                 isInstantTransition={isInstantTransition}
                                 folderIcons={folderIcons}
+                                folderMarks={folderMarks}
                               />
                             </motion.div>
                           ))}

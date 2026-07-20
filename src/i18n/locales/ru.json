@@ -177,7 +177,9 @@
       "newGroup": "Новая группа",
       "renameAlbum": "Переименовать альбом",
       "renameGroup": "Переименовать группу",
-      "rootDir": "Корневой каталог"
+      "rootDir": "Корневой каталог",
+      "clearTargetAlbum": "Clear Target Album",
+      "setTargetAlbum": "Set as Target Album"
     },
     "colors": {
       "blue": "Синий",
@@ -221,6 +223,12 @@
       "copyHere_other": "Копировать {{count}} изображений сюда",
       "deleteFolder": "Удалить папку",
       "importImages": "Импортировать изображения",
+      "folderMark": "Folder Mark",
+      "marks": {
+        "default": "Default (no mark)",
+        "exported": "Exported (no filtering)",
+        "raw": "RAW source (RAW only)"
+      },
       "moveHere_one": "Переместить изображение сюда",
       "moveHere_other": "Переместить {{count}} изображений сюда",
       "newFolder": "Новая папка",
@@ -737,6 +745,11 @@
         "undo": "Отменить (Ctrl+Z) или история (правый клик)"
       },
       "vc": "ВК"
+    },
+    "comments": {
+      "editTooltip": "Edit comment",
+      "empty": "No comment yet",
+      "toggleTooltip": "Show/hide photo comment"
     }
   },
   "export": {
@@ -898,7 +911,12 @@
         "collapse": "Свернуть",
         "expand": "Развернуть",
         "sortFolders": "Сортировать папки"
-      }
+      },
+      "marks": {
+        "exportedShort": "EXP",
+        "rawShort": "RAW"
+      },
+      "targetAlbum": "Target album"
     },
     "grid": {
       "columns": {
@@ -1359,6 +1377,18 @@
       "placeholder": "Search pictures by title...",
       "resultCount": "Showing {{total}}",
       "searchLabel": "Search pictures"
+    },
+    "quickComment": {
+      "cancel": "Cancel",
+      "close": "Close comment editor",
+      "hint": "Ctrl/⌘ + Enter to save",
+      "placeholder": "Write a short comment for this photo...",
+      "save": "Save",
+      "title": "Photo Comment"
+    },
+    "keybindMap": {
+      "close": "Close shortcut map",
+      "title": "Keyboard Shortcuts"
     }
   },
   "settings": {
@@ -1511,7 +1541,11 @@
         "zoom_in": "Приблизить",
         "zoom_in_step": "Приблизить по шагам",
         "zoom_out": "Отдалить",
-        "zoom_out_step": "Отдалить по шагам"
+        "zoom_out_step": "Отдалить по шагам",
+        "toggle_target_album": "Toggle target album membership",
+        "edit_photo_comment": "Edit photo comment",
+        "toggle_comment_overlay": "Show/hide photo comment",
+        "toggle_keybind_map": "Show shortcut map"
       },
       "sections": {
         "editing": "Редактирование",

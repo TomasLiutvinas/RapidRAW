@@ -177,7 +177,9 @@
       "newGroup": "新規グループ",
       "renameAlbum": "アルバム名を変更",
       "renameGroup": "グループ名を変更",
-      "rootDir": "ルートディレクトリ"
+      "rootDir": "ルートディレクトリ",
+      "clearTargetAlbum": "Clear Target Album",
+      "setTargetAlbum": "Set as Target Album"
     },
     "colors": {
       "blue": "ブルー",
@@ -221,6 +223,12 @@
       "copyHere_other": "{{count}} 枚の画像をここにコピー",
       "deleteFolder": "フォルダを削除",
       "importImages": "画像をインポート",
+      "folderMark": "Folder Mark",
+      "marks": {
+        "default": "Default (no mark)",
+        "exported": "Exported (no filtering)",
+        "raw": "RAW source (RAW only)"
+      },
       "moveHere_one": "画像をここに移動",
       "moveHere_other": "{{count}} 枚の画像をここに移動",
       "newFolder": "新規フォルダ",
@@ -737,6 +745,11 @@
         "undo": "元に戻す (Ctrl+Z) または履歴 (右クリック)"
       },
       "vc": "仮想"
+    },
+    "comments": {
+      "editTooltip": "Edit comment",
+      "empty": "No comment yet",
+      "toggleTooltip": "Show/hide photo comment"
     }
   },
   "export": {
@@ -898,7 +911,12 @@
         "collapse": "折りたたむ",
         "expand": "展開",
         "sortFolders": "フォルダーを並べ替え"
-      }
+      },
+      "marks": {
+        "exportedShort": "EXP",
+        "rawShort": "RAW"
+      },
+      "targetAlbum": "Target album"
     },
     "grid": {
       "columns": {
@@ -1359,6 +1377,18 @@
       "placeholder": "Search pictures by title...",
       "resultCount": "Showing {{total}}",
       "searchLabel": "Search pictures"
+    },
+    "quickComment": {
+      "cancel": "Cancel",
+      "close": "Close comment editor",
+      "hint": "Ctrl/⌘ + Enter to save",
+      "placeholder": "Write a short comment for this photo...",
+      "save": "Save",
+      "title": "Photo Comment"
+    },
+    "keybindMap": {
+      "close": "Close shortcut map",
+      "title": "Keyboard Shortcuts"
     }
   },
   "settings": {
@@ -1511,7 +1541,11 @@
         "zoom_in": "ズームイン",
         "zoom_in_step": "段階的にズームイン",
         "zoom_out": "ズームアウト",
-        "zoom_out_step": "段階的にズームアウト"
+        "zoom_out_step": "段階的にズームアウト",
+        "toggle_target_album": "Toggle target album membership",
+        "edit_photo_comment": "Edit photo comment",
+        "toggle_comment_overlay": "Show/hide photo comment",
+        "toggle_keybind_map": "Show shortcut map"
       },
       "sections": {
         "editing": "編集",

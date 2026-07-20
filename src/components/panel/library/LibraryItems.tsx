@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Image as ImageIcon, Folder, FolderOpen, Star as StarIcon, SlidersHorizontal, CloudOff } from 'lucide-react';
+import {
+  Image as ImageIcon,
+  Folder,
+  FolderOpen,
+  Star as StarIcon,
+  SlidersHorizontal,
+  CloudOff,
+  MessageSquare,
+} from 'lucide-react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { COLOR_LABELS, Color } from '../../../utils/adjustments';
@@ -10,6 +18,8 @@ import { ColumnWidths } from '../MainLibrary';
 import { useProcessStore } from '../../../store/useProcessStore';
 import { useSettingsStore } from '../../../store/useSettingsStore';
 import { IconAperture, IconFocalLength, IconIso, IconShutter } from '../editor/ExifIcons';
+import { useUIStore } from '../../../store/useUIStore';
+import { useLibraryStore } from '../../../store/useLibraryStore';
 
 interface ImageLayer {
   id: string;
@@ -36,7 +46,11 @@ const ThumbnailComponent = ({
   const data = useProcessStore((s) => s.thumbnails[path]);
   const exifOverlay = useSettingsStore((s) => s.appSettings?.exifOverlay || ExifOverlay.Off);
   const displayEditIcon = useSettingsStore((s) => s.appSettings?.displayEditIcon ?? true);
+  const isCommentOverlayVisible = useUIStore((s) => s.isCommentOverlayVisible);
+  const setUI = useUIStore((s) => s.setUI);
+  const setLibrary = useLibraryStore((s) => s.setLibrary);
   const showEditIcon = isEdited && displayEditIcon;
+  const comment = String(exif?.UserComment || '').trim();
 
   const [showPlaceholder, setShowPlaceholder] = useState(false);
   const [layers, setLayers] = useState<ImageLayer[]>([]);
@@ -412,6 +426,24 @@ const ThumbnailComponent = ({
       <div
         className={clsx('absolute inset-0 rounded-md pointer-events-none z-30 transition-all duration-150', ringClass)}
       />
+
+      {isCommentOverlayVisible && (
+        <button
+          type="button"
+          className="absolute left-1.5 top-1.5 z-40 max-w-[calc(100%-0.75rem)] rounded-md bg-black/55 px-2 py-1 text-left text-white shadow-md backdrop-blur-xs transition-colors hover:bg-black/75"
+          onClick={(event) => {
+            event.stopPropagation();
+            setLibrary({ libraryActivePath: path, multiSelectedPaths: [path], selectionAnchorPath: path });
+            setUI({ isQuickCommentModalOpen: true });
+          }}
+          data-tooltip="Click to edit comment"
+        >
+          <span className="flex items-start gap-1.5">
+            <MessageSquare size={12} className="mt-0.5 shrink-0" />
+            <span className="line-clamp-3 text-[10px] leading-tight">{comment || 'No comment'}</span>
+          </span>
+        </button>
+      )}
     </div>
   );
 };
@@ -435,6 +467,10 @@ const ListItemComponent = ({
   const { t } = useTranslation();
   const data = useProcessStore((s) => s.thumbnails[path]);
   const exifOverlay = useSettingsStore((s) => s.appSettings?.exifOverlay || ExifOverlay.Off);
+  const isCommentOverlayVisible = useUIStore((s) => s.isCommentOverlayVisible);
+  const setUI = useUIStore((s) => s.setUI);
+  const setLibrary = useLibraryStore((s) => s.setLibrary);
+  const comment = String(exif?.UserComment || '').trim();
 
   const [showPlaceholder, setShowPlaceholder] = useState(false);
   const [layers, setLayers] = useState<ImageLayer[]>([]);
@@ -618,6 +654,21 @@ const ListItemComponent = ({
         <Text variant={TextVariants.small} className="truncate" weight={TextWeights.medium} color={TextColors.primary}>
           {baseName}
         </Text>
+        {isCommentOverlayVisible && (
+          <button
+            type="button"
+            className="flex min-w-0 items-center gap-1 rounded-md bg-bg-primary px-1.5 py-0.5 text-text-secondary hover:text-text-primary"
+            onClick={(event) => {
+              event.stopPropagation();
+              setLibrary({ libraryActivePath: path, multiSelectedPaths: [path], selectionAnchorPath: path });
+              setUI({ isQuickCommentModalOpen: true });
+            }}
+            data-tooltip={comment || 'No comment'}
+          >
+            <MessageSquare size={12} className="shrink-0" />
+            <span className="truncate text-[10px]">{comment || 'No comment'}</span>
+          </button>
+        )}
         {isVirtualCopy && (
           <Text
             as="div"

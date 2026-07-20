@@ -177,7 +177,9 @@
       "newGroup": "Nuovo Gruppo",
       "renameAlbum": "Rinomina Album",
       "renameGroup": "Rinomina Gruppo",
-      "rootDir": "Cartella Principale"
+      "rootDir": "Cartella Principale",
+      "clearTargetAlbum": "Clear Target Album",
+      "setTargetAlbum": "Set as Target Album"
     },
     "colors": {
       "blue": "Blu",
@@ -221,6 +223,12 @@
       "copyHere_other": "Copia {{count}} immagini qui",
       "deleteFolder": "Elimina Cartella",
       "importImages": "Importa Immagini",
+      "folderMark": "Folder Mark",
+      "marks": {
+        "default": "Default (no mark)",
+        "exported": "Exported (no filtering)",
+        "raw": "RAW source (RAW only)"
+      },
       "moveHere_one": "Sposta immagine qui",
       "moveHere_other": "Sposta {{count}} immagini qui",
       "newFolder": "Nuova Cartella",
@@ -737,6 +745,11 @@
         "undo": "Annulla (Ctrl+Z) o Cronologia (Tasto destro)"
       },
       "vc": "CV"
+    },
+    "comments": {
+      "editTooltip": "Edit comment",
+      "empty": "No comment yet",
+      "toggleTooltip": "Show/hide photo comment"
     }
   },
   "export": {
@@ -899,7 +912,12 @@
         "collapse": "Comprimi",
         "expand": "Espandi",
         "sortFolders": "Ordina cartelle"
-      }
+      },
+      "marks": {
+        "exportedShort": "EXP",
+        "rawShort": "RAW"
+      },
+      "targetAlbum": "Target album"
     },
     "grid": {
       "columns": {
@@ -1360,6 +1378,18 @@
       "placeholder": "Search pictures by title...",
       "resultCount": "Showing {{total}}",
       "searchLabel": "Search pictures"
+    },
+    "quickComment": {
+      "cancel": "Cancel",
+      "close": "Close comment editor",
+      "hint": "Ctrl/⌘ + Enter to save",
+      "placeholder": "Write a short comment for this photo...",
+      "save": "Save",
+      "title": "Photo Comment"
+    },
+    "keybindMap": {
+      "close": "Close shortcut map",
+      "title": "Keyboard Shortcuts"
     }
   },
   "settings": {
@@ -1512,7 +1542,11 @@
         "zoom_in": "Ingrandisci",
         "zoom_in_step": "Ingrandisci (a step)",
         "zoom_out": "Riduci",
-        "zoom_out_step": "Riduci (a step)"
+        "zoom_out_step": "Riduci (a step)",
+        "toggle_target_album": "Toggle target album membership",
+        "edit_photo_comment": "Edit photo comment",
+        "toggle_comment_overlay": "Show/hide photo comment",
+        "toggle_keybind_map": "Show shortcut map"
       },
       "sections": {
         "editing": "Modifica",

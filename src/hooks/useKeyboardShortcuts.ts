@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { ImageFile, Panel, ExifOverlay } from '../components/ui/AppProperties';
+import { invoke } from '@tauri-apps/api/core';
+import { toast } from 'react-toastify';
+import { ImageFile, Panel, ExifOverlay, Invokes, LibraryViewMode, SortDirection } from '../components/ui/AppProperties';
 import { KEYBIND_DEFINITIONS, normalizeCombo } from '../utils/keyboardUtils';
 import { useEditorStore } from '../store/useEditorStore';
 import { useLibraryStore } from '../store/useLibraryStore';
@@ -8,6 +10,7 @@ import { useUIStore } from '../store/useUIStore';
 import { useProcessStore } from '../store/useProcessStore';
 import { useEditorActions } from './useEditorActions';
 import { useLibraryActions } from './useLibraryActions';
+import { FILENAME_ORDER_KEY, getParentDir, reorderPathsAsBlock, replacePathPreservingVirtualSuffix } from '../utils/filenameOrder';
 
 interface KeyboardShortcutsProps {
   sortedImageList: Array<ImageFile>;
@@ -17,6 +20,11 @@ interface KeyboardShortcutsProps {
   handlePasteFiles(str: string): void;
   handleToggleFullScreen(): void;
   handleZoomChange(zoomValue: number, fitToWindow?: boolean): void;
+}
+
+interface ReorderFilesByNameResult {
+  renames: Record<string, string>;
+  ordered_paths: string[];
 }
 
 export const useKeyboardShortcuts = ({
@@ -29,9 +37,12 @@ export const useKeyboardShortcuts = ({
   handleZoomChange,
 }: KeyboardShortcutsProps) => {
   const { handleRotate, handleCopyAdjustments, handlePasteAdjustments } = useEditorActions();
-  const { handleRate, handleSetColorLabel } = useLibraryActions();
+  const { handleRate, handleSetColorLabel, handleToggleTargetAlbumMembership } = useLibraryActions();
 
   const sortedListRef = useRef(sortedImageList);
+  const reorderFlushTimeoutRef = useRef<number | null>(null);
+  const reorderInFlightRef = useRef(false);
+  const reorderQueuedOrderRef = useRef<string[] | null>(null);
   useEffect(() => {
     sortedListRef.current = sortedImageList;
   }, [sortedImageList]);
@@ -69,6 +80,34 @@ export const useKeyboardShortcuts = ({
         execute: (e: KeyboardEvent, s: ReturnType<typeof getStoreState>) => {
           e.preventDefault();
           s.ui.setUI({ isFuzzySearchModalOpen: true });
+        },
+      },
+      toggle_target_album: {
+        shouldFire: (s: ReturnType<typeof getStoreState>) =>
+          !!s.editor.selectedImage || !!s.library.libraryActivePath || s.library.multiSelectedPaths.length > 0,
+        execute: (e: KeyboardEvent) => {
+          e.preventDefault();
+          handleToggleTargetAlbumMembership();
+        },
+      },
+      toggle_comment_overlay: {
+        shouldFire: (s: ReturnType<typeof getStoreState>) => !!s.editor.selectedImage || !!s.library.libraryActivePath,
+        execute: (e: KeyboardEvent, s: ReturnType<typeof getStoreState>) => {
+          e.preventDefault();
+          s.ui.setUI({ isCommentOverlayVisible: !s.ui.isCommentOverlayVisible });
+        },
+      },
+      edit_photo_comment: {
+        shouldFire: (s: ReturnType<typeof getStoreState>) => !!s.editor.selectedImage || !!s.library.libraryActivePath,
+        execute: (e: KeyboardEvent, s: ReturnType<typeof getStoreState>) => {
+          e.preventDefault();
+          s.ui.setUI({ isQuickCommentModalOpen: true });
+        },
+      },
+      toggle_keybind_map: {
+        execute: (e: KeyboardEvent, s: ReturnType<typeof getStoreState>) => {
+          e.preventDefault();
+          s.ui.setUI({ isKeybindMapOpen: !s.ui.isKeybindMapOpen });
         },
       },
       copy_adjustments: {
@@ -521,8 +560,163 @@ export const useKeyboardShortcuts = ({
       },
     ];
 
+    const mapPathsAfterRename = (renames: Record<string, string>) => {
+      const library = useLibraryStore.getState();
+      const process = useProcessStore.getState();
+
+      const nextThumbnails: Record<string, string> = {};
+      Object.entries(process.thumbnails).forEach(([path, value]) => {
+        nextThumbnails[replacePathPreservingVirtualSuffix(path, renames)] = value;
+      });
+
+      process.setProcess({ thumbnails: nextThumbnails });
+      library.setLibrary((state) => ({
+        imageList: state.imageList.map((image) => ({
+          ...image,
+          path: replacePathPreservingVirtualSuffix(image.path, renames),
+        })),
+        imageRatings: Object.fromEntries(
+          Object.entries(state.imageRatings).map(([path, rating]) => [replacePathPreservingVirtualSuffix(path, renames), rating]),
+        ),
+        multiSelectedPaths: state.multiSelectedPaths.map((path) => replacePathPreservingVirtualSuffix(path, renames)),
+        libraryActivePath: state.libraryActivePath
+          ? replacePathPreservingVirtualSuffix(state.libraryActivePath, renames)
+          : state.libraryActivePath,
+        selectionAnchorPath: state.selectionAnchorPath
+          ? replacePathPreservingVirtualSuffix(state.selectionAnchorPath, renames)
+          : state.selectionAnchorPath,
+      }));
+
+      if (reorderQueuedOrderRef.current) {
+        reorderQueuedOrderRef.current = reorderQueuedOrderRef.current.map((path) =>
+          replacePathPreservingVirtualSuffix(path, renames),
+        );
+      }
+    };
+
+    const flushReorderQueue = async () => {
+      if (reorderInFlightRef.current) return;
+      const orderedPaths = reorderQueuedOrderRef.current;
+      if (!orderedPaths) return;
+
+      reorderQueuedOrderRef.current = null;
+      reorderInFlightRef.current = true;
+      useLibraryStore.getState().setLibrary({ filenameOrderPending: true });
+
+      try {
+        const result = await invoke<ReorderFilesByNameResult>(Invokes.ReorderFilesByName, { orderedPaths });
+        mapPathsAfterRename(result.renames || {});
+      } catch (error) {
+        toast.error(`Failed to reorder files: ${error}`);
+      } finally {
+        reorderInFlightRef.current = false;
+        if (reorderQueuedOrderRef.current) {
+          window.setTimeout(flushReorderQueue, 0);
+        } else {
+          useLibraryStore.getState().setLibrary({ filenameOrderPending: false });
+        }
+      }
+    };
+
+    const scheduleReorderFlush = (orderedPaths: string[]) => {
+      reorderQueuedOrderRef.current = orderedPaths;
+      if (reorderFlushTimeoutRef.current) window.clearTimeout(reorderFlushTimeoutRef.current);
+      reorderFlushTimeoutRef.current = window.setTimeout(flushReorderQueue, 180);
+    };
+
+    const handleOrderModeKey = (event: KeyboardEvent, state: ReturnType<typeof getStoreState>) => {
+      if (!state.library.filenameOrderMode) return false;
+      if (state.editor.selectedImage || state.ui.activeView !== 'library') return false;
+
+      const orderedPaths = sortedListRef.current.map((image) => image.path);
+      if (orderedPaths.length === 0) return false;
+
+      const activePath = state.library.libraryActivePath || orderedPaths[0];
+      const activeIndex = Math.max(0, orderedPaths.indexOf(activePath));
+      const columnStep = Math.max(1, state.library.libraryColumnCount || 1);
+      const setActiveIndex = (index: number) => {
+        const nextIndex = Math.max(0, Math.min(orderedPaths.length - 1, index));
+        const nextPath = orderedPaths[nextIndex];
+        state.library.setLibrary({ libraryActivePath: nextPath, multiSelectedPaths: [nextPath], selectionAnchorPath: nextPath });
+      };
+
+      const getVerticalIndex = (direction: 'up' | 'down') => {
+        if (columnStep <= 1) return direction === 'down' ? activeIndex + 1 : activeIndex - 1;
+        if (direction === 'up') return activeIndex - columnStep;
+
+        const nextRowIndex = activeIndex + columnStep;
+        if (nextRowIndex < orderedPaths.length) return nextRowIndex;
+
+        const currentColumn = activeIndex % columnStep;
+        const lastRowStart = Math.floor((orderedPaths.length - 1) / columnStep) * columnStep;
+        return Math.min(lastRowStart + currentColumn, orderedPaths.length - 1);
+      };
+
+      if (['KeyH', 'KeyJ', 'KeyK', 'KeyL'].includes(event.code)) {
+        event.preventDefault();
+        if (event.code === 'KeyH') setActiveIndex(activeIndex - 1);
+        if (event.code === 'KeyL') setActiveIndex(activeIndex + 1);
+        if (event.code === 'KeyJ') setActiveIndex(getVerticalIndex('down'));
+        if (event.code === 'KeyK') setActiveIndex(getVerticalIndex('up'));
+        return true;
+      }
+
+      if (!['KeyA', 'KeyS'].includes(event.code)) return false;
+      event.preventDefault();
+
+      if (state.library.activeAlbumId) {
+        toast.info('Filename order mode is for folders. Album-specific order should not rename files.');
+        return true;
+      }
+      if (state.settings.appSettings?.libraryViewMode === LibraryViewMode.Recursive) {
+        toast.info('Switch to Current Folder view before using filename order mode.');
+        return true;
+      }
+
+      const visiblePathSet = new Set(orderedPaths);
+      const selectedPaths = (state.library.multiSelectedPaths.length > 0 ? state.library.multiSelectedPaths : [activePath]).filter(
+        (path) => visiblePathSet.has(path),
+      );
+      if (selectedPaths.length === 0) return true;
+      if (selectedPaths.some((path) => path.includes('?vc='))) {
+        toast.info('Filename order mode cannot rename virtual copies.');
+        return true;
+      }
+
+      const selectedDirs = new Set(selectedPaths.map(getParentDir));
+      const visibleDirs = new Set(orderedPaths.map(getParentDir));
+      if (selectedDirs.size !== 1 || visibleDirs.size !== 1) {
+        toast.info('Filename order mode only works within one folder at a time.');
+        return true;
+      }
+
+      const step = event.shiftKey || event.repeat ? 10 : 1;
+      const nextOrder = reorderPathsAsBlock(orderedPaths, selectedPaths, event.code === 'KeyA' ? 'up' : 'down', step);
+      const byPath = new Map(state.library.imageList.map((image) => [image.path, image]));
+      const reorderedVisibleImages = nextOrder.map((path) => byPath.get(path)).filter(Boolean) as ImageFile[];
+      const remainingImages = state.library.imageList.filter((image) => !visiblePathSet.has(image.path));
+      state.library.setSortCriteria({ key: FILENAME_ORDER_KEY, order: SortDirection.Ascending });
+      state.library.setLibrary({
+        imageList: [...reorderedVisibleImages, ...remainingImages],
+        libraryActivePath: activePath,
+        multiSelectedPaths: selectedPaths,
+      });
+      scheduleReorderFlush(nextOrder);
+      return true;
+    };
+
     const handleKeyDown = (event: KeyboardEvent) => {
       const state = getStoreState();
+
+      const isInputFocused =
+        document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA';
+      const normalized = normalizeCombo(event, state.settings.osPlatform);
+      const action = comboMap.get(normalized.join('+'));
+
+      if (!isInputFocused && action === 'toggle_keybind_map') {
+        actions.toggle_keybind_map.execute(event, state);
+        return;
+      }
 
       const isModalOpen =
         state.ui.isCreateFolderModalOpen ||
@@ -531,6 +725,8 @@ export const useKeyboardShortcuts = ({
         state.ui.isImportModalOpen ||
         state.ui.isCopyPasteSettingsModalOpen ||
         state.ui.isFuzzySearchModalOpen ||
+        state.ui.isQuickCommentModalOpen ||
+        state.ui.isKeybindMapOpen ||
         state.ui.confirmModalState.isOpen ||
         state.ui.panoramaModalState.isOpen ||
         state.ui.cullingModalState.isOpen ||
@@ -540,9 +736,9 @@ export const useKeyboardShortcuts = ({
 
       if (isModalOpen) return;
 
-      const isInputFocused =
-        document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA';
       if (isInputFocused) return;
+
+      if (handleOrderModeKey(event, state)) return;
 
       for (const builtin of builtinShortcuts) {
         if (builtin.match(event, state)) {
@@ -550,9 +746,6 @@ export const useKeyboardShortcuts = ({
           return;
         }
       }
-
-      const normalized = normalizeCombo(event, state.settings.osPlatform);
-      const action = comboMap.get(normalized.join('+'));
 
       if (action) {
         const handler = actions[action];
@@ -566,6 +759,9 @@ export const useKeyboardShortcuts = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
+      if (reorderFlushTimeoutRef.current) {
+        window.clearTimeout(reorderFlushTimeoutRef.current);
+      }
     };
   }, [
     handleBackToLibrary,
@@ -579,5 +775,6 @@ export const useKeyboardShortcuts = ({
     handlePasteAdjustments,
     handleRate,
     handleSetColorLabel,
+    handleToggleTargetAlbumMembership,
   ]);
 };

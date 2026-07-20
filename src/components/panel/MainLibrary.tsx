@@ -15,6 +15,7 @@ import {
   Users,
   SlidersHorizontal,
   HardDrive,
+  ArrowUpDown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -31,11 +32,13 @@ import {
   RawStatus,
   EditedStatus,
   Invokes,
+  SortDirection,
 } from '../ui/AppProperties';
 import { ImportState, Status } from '../ui/ExportImportProperties';
 import Text from '../ui/Text';
 import { TextColors, TextVariants, TextWeights } from '../../types/typography';
 import { useLibraryStore } from '../../store/useLibraryStore';
+import { FILENAME_ORDER_KEY } from '../../utils/filenameOrder';
 
 import LibraryGrid from './library/LibraryGrid';
 import { SearchInput, ViewOptionsDropdown } from './library/LibraryHeader';
@@ -121,8 +124,13 @@ export default function MainLibrary(props: MainLibraryProps) {
   const [cacheStatus, setCacheStatus] = useState<ThumbnailCacheStatus | null>(null);
   const [isCacheStatusLoading, setIsCacheStatusLoading] = useState(false);
   const [isPreCaching, setIsPreCaching] = useState(false);
+  const [isCacheExpanded, setIsCacheExpanded] = useState(false);
 
   const searchCriteria = useLibraryStore((state) => state.searchCriteria);
+  const filenameOrderMode = useLibraryStore((state) => state.filenameOrderMode);
+  const filenameOrderPending = useLibraryStore((state) => state.filenameOrderPending);
+  const setLibrary = useLibraryStore((state) => state.setLibrary);
+  const setSortCriteria = useLibraryStore((state) => state.setSortCriteria);
 
   const translatedRatingFilterOptions = useMemo(
     () => [
@@ -286,6 +294,17 @@ export default function MainLibrary(props: MainLibraryProps) {
     props.onRequestThumbnails(props.imageList.map((image) => image.path));
   }, [props.imageList, props.onRequestThumbnails]);
 
+  const handleToggleFilenameOrderMode = useCallback(() => {
+    const nextMode = !filenameOrderMode;
+    if (nextMode) {
+      setLibrary({ filenameOrderMode: true, imageList: props.imageList });
+      setSortCriteria({ key: FILENAME_ORDER_KEY, order: SortDirection.Ascending });
+    } else {
+      setLibrary({ filenameOrderMode: false });
+      setSortCriteria({ key: 'name', order: SortDirection.Ascending });
+    }
+  }, [filenameOrderMode, props.imageList, setLibrary, setSortCriteria]);
+
   if (!props.rootPaths || props.rootPaths.length === 0) {
     if (!props.appSettings) {
       return null;
@@ -403,12 +422,12 @@ export default function MainLibrary(props: MainLibraryProps) {
                     <p>
                       {t('library.splash.imagesBy')}{' '}
                       <a
-                        href="https://instagram.com/timonkaech.photography"
+                        href="https://www.instagram.com/liutvis/"
                         className="hover:underline"
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        Timon Käch
+                        Tomas Liutvinas
                       </a>
                     </p>
                     {appVersion && (
@@ -534,38 +553,76 @@ export default function MainLibrary(props: MainLibraryProps) {
               <span>{t('library.import.failed')}</span>
             </Text>
           )}
+          {props.imageList.length > 0 && (
+            <button
+              type="button"
+              className={`hidden xl:flex items-center gap-2 rounded-lg px-3 py-2 min-h-12 transition-colors ${
+                filenameOrderMode ? 'bg-accent text-button-text' : 'bg-surface hover:bg-card-active text-text-primary'
+              }`}
+              onClick={handleToggleFilenameOrderMode}
+              data-tooltip={
+                filenameOrderMode
+                  ? 'Order mode: H/J/K/L navigate, A/S move, Shift+A/S moves 10. Renames files with RR_ prefixes.'
+                  : 'Enable filename order mode'
+              }
+            >
+              {filenameOrderPending ? <Loader2 size={16} className="animate-spin shrink-0" /> : <ArrowUpDown size={16} />}
+              <span className="text-xs font-semibold whitespace-nowrap">{filenameOrderMode ? 'Order on' : 'Order'}</span>
+            </button>
+          )}
           {props.imageList.length > 0 && cacheStatus && (
             <div
-              className="hidden xl:flex items-center gap-2 rounded-lg bg-surface px-3 py-2 min-h-12"
+              className="hidden xl:flex items-center gap-2 rounded-lg bg-surface px-2 py-2 min-h-12"
               data-tooltip={`Loaded thumbnails cached: ${cacheStatus.cached_count}/${cacheStatus.total_count} (${formatBytes(
                 cacheStatus.cached_size_bytes,
               )}). Total thumbnail cache: ${cacheStatus.total_cache_count} files, ${formatBytes(
                 cacheStatus.total_cache_size_bytes,
               )}.`}
             >
-              <HardDrive size={16} className="text-text-secondary shrink-0" />
-              <div className="leading-tight whitespace-nowrap">
-                <Text as="div" variant={TextVariants.small} weight={TextWeights.semibold} color={TextColors.primary}>
-                  {cacheStatus.cached_count}/{cacheStatus.total_count} cached
-                </Text>
-                <Text as="div" variant={TextVariants.small} color={TextColors.secondary}>
-                  {formatBytes(cacheStatus.cached_size_bytes)} loaded ·{' '}
-                  {formatBytes(cacheStatus.total_cache_size_bytes)} total
-                </Text>
-              </div>
               <button
                 type="button"
-                className="ml-1 rounded-md px-2 py-1 text-xs font-semibold text-text-primary bg-bg-primary hover:bg-card-active disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={handlePreCacheAll}
-                disabled={
-                  isCacheStatusLoading ||
-                  isPreCaching ||
-                  !props.onRequestThumbnails ||
-                  cacheStatus.cached_count >= cacheStatus.total_count
-                }
+                className="flex items-center gap-2 rounded-md px-1.5 py-1 hover:bg-card-active"
+                onClick={() => setIsCacheExpanded((value) => !value)}
+                data-tooltip={isCacheExpanded ? 'Collapse cache status' : 'Expand cache status'}
               >
-                {isPreCaching || (props.thumbnailProgress?.total ?? 0) > 0 ? 'Caching…' : 'Cache all'}
+                <HardDrive size={16} className="text-text-secondary shrink-0" />
+                <Text as="div" variant={TextVariants.small} weight={TextWeights.semibold} color={TextColors.primary}>
+                  {cacheStatus.cached_count}/{cacheStatus.total_count}
+                </Text>
               </button>
+              <AnimatePresence initial={false}>
+                {isCacheExpanded && (
+                  <motion.div
+                    initial={{ width: 0, opacity: 0 }}
+                    animate={{ width: 'auto', opacity: 1 }}
+                    exit={{ width: 0, opacity: 0 }}
+                    className="flex items-center gap-2 overflow-hidden"
+                  >
+                    <div className="leading-tight whitespace-nowrap">
+                      <Text as="div" variant={TextVariants.small} weight={TextWeights.semibold} color={TextColors.primary}>
+                        {cacheStatus.cached_count}/{cacheStatus.total_count} cached
+                      </Text>
+                      <Text as="div" variant={TextVariants.small} color={TextColors.secondary}>
+                        {formatBytes(cacheStatus.cached_size_bytes)} loaded ·{' '}
+                        {formatBytes(cacheStatus.total_cache_size_bytes)} total
+                      </Text>
+                    </div>
+                    <button
+                      type="button"
+                      className="rounded-md px-2 py-1 text-xs font-semibold text-text-primary bg-bg-primary hover:bg-card-active disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={handlePreCacheAll}
+                      disabled={
+                        isCacheStatusLoading ||
+                        isPreCaching ||
+                        !props.onRequestThumbnails ||
+                        cacheStatus.cached_count >= cacheStatus.total_count
+                      }
+                    >
+                      {isPreCaching || (props.thumbnailProgress?.total ?? 0) > 0 ? 'Caching…' : 'Cache all'}
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               <button
                 type="button"
                 className="rounded-md p-1 text-text-secondary hover:bg-card-active hover:text-text-primary disabled:opacity-50"

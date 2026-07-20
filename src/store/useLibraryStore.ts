@@ -16,6 +16,12 @@ export interface SearchCriteria {
   mode: 'AND' | 'OR';
 }
 
+export interface TargetAlbumFeedback {
+  action: 'added' | 'removed';
+  albumId: string;
+  token: number;
+}
+
 interface LibraryState {
   // Paths & Trees
   rootPaths: string[];
@@ -27,6 +33,8 @@ interface LibraryState {
   // Albums
   albumTree: AlbumItem[];
   activeAlbumId: string | null;
+  targetAlbumId: string | null;
+  targetAlbumFeedback: TargetAlbumFeedback | null;
   expandedAlbumGroups: Set<string>;
 
   // Images & Selection
@@ -36,6 +44,8 @@ interface LibraryState {
   selectionAnchorPath: string | null;
   libraryActivePath: string | null;
   libraryActiveAdjustments: Adjustments;
+  filenameOrderMode: boolean;
+  filenameOrderPending: boolean;
 
   // Sorting & Filtering
   sortCriteria: SortCriteria;
@@ -47,6 +57,7 @@ interface LibraryState {
   isViewLoading: boolean;
   libraryScrollTop: number;
   listColumnWidths: ColumnWidths;
+  libraryColumnCount: number;
 
   // Actions
   setLibrary: (updater: Partial<LibraryState> | ((state: LibraryState) => Partial<LibraryState>)) => void;
@@ -65,6 +76,8 @@ export const useLibraryStore = create<LibraryState>((set) => ({
 
   albumTree: [],
   activeAlbumId: null,
+  targetAlbumId: null,
+  targetAlbumFeedback: null,
   expandedAlbumGroups: new Set<string>(),
 
   imageList: [],
@@ -73,6 +86,8 @@ export const useLibraryStore = create<LibraryState>((set) => ({
   selectionAnchorPath: null,
   libraryActivePath: null,
   libraryActiveAdjustments: INITIAL_ADJUSTMENTS,
+  filenameOrderMode: false,
+  filenameOrderPending: false,
 
   sortCriteria: { key: 'name', order: SortDirection.Ascending },
   filterCriteria: { colors: [], rating: 0, rawStatus: RawStatus.All },
@@ -81,6 +96,7 @@ export const useLibraryStore = create<LibraryState>((set) => ({
   isTreeLoading: false,
   isViewLoading: false,
   libraryScrollTop: 0,
+  libraryColumnCount: 1,
   listColumnWidths: {
     thumbnail: 4,
     name: 20,

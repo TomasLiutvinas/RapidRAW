@@ -177,7 +177,9 @@
       "newGroup": "Nowa grupa",
       "renameAlbum": "Zmień nazwę albumu",
       "renameGroup": "Zmień nazwę grupy",
-      "rootDir": "Katalog główny"
+      "rootDir": "Katalog główny",
+      "clearTargetAlbum": "Clear Target Album",
+      "setTargetAlbum": "Set as Target Album"
     },
     "colors": {
       "blue": "Niebieski",
@@ -225,6 +227,12 @@
       "copyHere_other": "Skopiuj {{count}} obrazów tutaj",
       "deleteFolder": "Usuń folder",
       "importImages": "Importuj obrazy",
+      "folderMark": "Folder Mark",
+      "marks": {
+        "default": "Default (no mark)",
+        "exported": "Exported (no filtering)",
+        "raw": "RAW source (RAW only)"
+      },
       "moveHere_few": "Przenieś {{count}} obrazy tutaj",
       "moveHere_many": "Przenieś {{count}} obrazów tutaj",
       "moveHere_one": "Przenieś obraz tutaj",
@@ -775,6 +783,11 @@
         "undo": "Cofnij (Ctrl+Z) lub Historia (Prawy przycisk)"
       },
       "vc": "VC"
+    },
+    "comments": {
+      "editTooltip": "Edit comment",
+      "empty": "No comment yet",
+      "toggleTooltip": "Show/hide photo comment"
     }
   },
   "export": {
@@ -941,7 +954,12 @@
         "collapse": "Zwiń",
         "expand": "Rozwiń",
         "sortFolders": "Sortuj foldery"
-      }
+      },
+      "marks": {
+        "exportedShort": "EXP",
+        "rawShort": "RAW"
+      },
+      "targetAlbum": "Target album"
     },
     "grid": {
       "columns": {
@@ -1416,6 +1434,18 @@
       "placeholder": "Search pictures by title...",
       "resultCount": "Showing {{total}}",
       "searchLabel": "Search pictures"
+    },
+    "quickComment": {
+      "cancel": "Cancel",
+      "close": "Close comment editor",
+      "hint": "Ctrl/⌘ + Enter to save",
+      "placeholder": "Write a short comment for this photo...",
+      "save": "Save",
+      "title": "Photo Comment"
+    },
+    "keybindMap": {
+      "close": "Close shortcut map",
+      "title": "Keyboard Shortcuts"
     }
   },
   "settings": {
@@ -1574,7 +1604,11 @@
         "zoom_in": "Przybliż",
         "zoom_in_step": "Przybliż (krokowo)",
         "zoom_out": "Oddal",
-        "zoom_out_step": "Oddal (krokowo)"
+        "zoom_out_step": "Oddal (krokowo)",
+        "toggle_target_album": "Toggle target album membership",
+        "edit_photo_comment": "Edit photo comment",
+        "toggle_comment_overlay": "Show/hide photo comment",
+        "toggle_keybind_map": "Show shortcut map"
       },
       "sections": {
         "editing": "Edycja",

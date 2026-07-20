@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useLibraryStore } from '../store/useLibraryStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { RawStatus, EditedStatus, SortDirection, ImageFile } from '../components/ui/AppProperties';
+import { FILENAME_ORDER_KEY } from '../utils/filenameOrder';
 
 export const ADVANCED_QUERY_REGEX =
   /^(iso|aperture|f|shutter|s|focal|mm|rating|color|camera|make|model|lens)\s*(?::)?\s*(>=|<=|>|<|=)?\s*(.+)$/i;
@@ -220,6 +221,10 @@ export function computeSortedLibrary(libraryState: any, settingsState: any): Ima
         });
 
   const list = [...filteredBySearch];
+
+  if (sortCriteria.key === FILENAME_ORDER_KEY) {
+    return list;
+  }
 
   list.sort((a, b) => {
     const { key, order } = sortCriteria;
