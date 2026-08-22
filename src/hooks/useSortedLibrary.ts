@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { useLibraryStore } from '../store/useLibraryStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { RawStatus, EditedStatus, SortDirection, ImageFile } from '../components/ui/AppProperties';
-import { FILENAME_ORDER_KEY } from '../utils/filenameOrder';
 
 export const ADVANCED_QUERY_REGEX =
   /^(iso|aperture|f|shutter|s|focal|mm|rating|color|camera|make|model|lens)\s*(?::)?\s*(>=|<=|>|<|=)?\s*(.+)$/i;
@@ -36,7 +35,7 @@ export const parseFocalLength = (val: string | undefined): number => {
 };
 
 export function computeSortedLibrary(libraryState: any, settingsState: any): ImageFile[] {
-  const { imageList, imageRatings, filterCriteria, searchCriteria, sortCriteria } = libraryState;
+  const { imageList, imageRatings, filterCriteria, searchCriteria, sortCriteria, filenameOrderPreviewPaths } = libraryState;
   const { supportedTypes } = settingsState;
 
   const getParentDir = (filePath: string): string => {
@@ -222,10 +221,6 @@ export function computeSortedLibrary(libraryState: any, settingsState: any): Ima
 
   const list = [...filteredBySearch];
 
-  if (sortCriteria.key === FILENAME_ORDER_KEY) {
-    return list;
-  }
-
   list.sort((a, b) => {
     const { key, order } = sortCriteria;
     let comparison = 0;
@@ -282,6 +277,14 @@ export function computeSortedLibrary(libraryState: any, settingsState: any): Ima
     return order === SortDirection.Ascending ? comparison : -comparison;
   });
 
+  if (filenameOrderPreviewPaths?.length) {
+    const byPath = new Map(list.map((image) => [image.path, image]));
+    const previewSet = new Set(filenameOrderPreviewPaths);
+    const previewImages = filenameOrderPreviewPaths.map((path: string) => byPath.get(path)).filter(Boolean) as ImageFile[];
+    const remainingImages = list.filter((image) => !previewSet.has(image.path));
+    return [...previewImages, ...remainingImages];
+  }
+
   return list;
 }
 
@@ -291,15 +294,16 @@ export function useSortedLibrary() {
   const filterCriteria = useLibraryStore((state) => state.filterCriteria);
   const searchCriteria = useLibraryStore((state) => state.searchCriteria);
   const sortCriteria = useLibraryStore((state) => state.sortCriteria);
+  const filenameOrderPreviewPaths = useLibraryStore((state) => state.filenameOrderPreviewPaths);
 
   const supportedTypes = useSettingsStore((state) => state.supportedTypes);
 
   const sortedImageList = useMemo(() => {
     return computeSortedLibrary(
-      { imageList, imageRatings, filterCriteria, searchCriteria, sortCriteria },
+      { imageList, imageRatings, filterCriteria, searchCriteria, sortCriteria, filenameOrderPreviewPaths },
       { supportedTypes },
     );
-  }, [imageList, sortCriteria, imageRatings, filterCriteria, supportedTypes, searchCriteria]);
+  }, [imageList, sortCriteria, imageRatings, filterCriteria, supportedTypes, searchCriteria, filenameOrderPreviewPaths]);
 
   return sortedImageList;
 }

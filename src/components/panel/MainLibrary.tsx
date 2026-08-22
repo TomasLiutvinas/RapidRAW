@@ -15,7 +15,6 @@ import {
   Users,
   SlidersHorizontal,
   HardDrive,
-  ArrowUpDown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -32,13 +31,11 @@ import {
   RawStatus,
   EditedStatus,
   Invokes,
-  SortDirection,
 } from '../ui/AppProperties';
 import { ImportState, Status } from '../ui/ExportImportProperties';
 import Text from '../ui/Text';
 import { TextColors, TextVariants, TextWeights } from '../../types/typography';
 import { useLibraryStore } from '../../store/useLibraryStore';
-import { FILENAME_ORDER_KEY } from '../../utils/filenameOrder';
 
 import LibraryGrid from './library/LibraryGrid';
 import { SearchInput, ViewOptionsDropdown } from './library/LibraryHeader';
@@ -127,10 +124,6 @@ export default function MainLibrary(props: MainLibraryProps) {
   const [isCacheExpanded, setIsCacheExpanded] = useState(false);
 
   const searchCriteria = useLibraryStore((state) => state.searchCriteria);
-  const filenameOrderMode = useLibraryStore((state) => state.filenameOrderMode);
-  const filenameOrderPending = useLibraryStore((state) => state.filenameOrderPending);
-  const setLibrary = useLibraryStore((state) => state.setLibrary);
-  const setSortCriteria = useLibraryStore((state) => state.setSortCriteria);
 
   const translatedRatingFilterOptions = useMemo(
     () => [
@@ -293,17 +286,6 @@ export default function MainLibrary(props: MainLibraryProps) {
     setIsPreCaching(true);
     props.onRequestThumbnails(props.imageList.map((image) => image.path));
   }, [props.imageList, props.onRequestThumbnails]);
-
-  const handleToggleFilenameOrderMode = useCallback(() => {
-    const nextMode = !filenameOrderMode;
-    if (nextMode) {
-      setLibrary({ filenameOrderMode: true, imageList: props.imageList });
-      setSortCriteria({ key: FILENAME_ORDER_KEY, order: SortDirection.Ascending });
-    } else {
-      setLibrary({ filenameOrderMode: false });
-      setSortCriteria({ key: 'name', order: SortDirection.Ascending });
-    }
-  }, [filenameOrderMode, props.imageList, setLibrary, setSortCriteria]);
 
   if (!props.rootPaths || props.rootPaths.length === 0) {
     if (!props.appSettings) {
@@ -552,23 +534,6 @@ export default function MainLibrary(props: MainLibraryProps) {
               <AlertTriangle size={16} />
               <span>{t('library.import.failed')}</span>
             </Text>
-          )}
-          {props.imageList.length > 0 && (
-            <button
-              type="button"
-              className={`hidden xl:flex items-center gap-2 rounded-lg px-3 py-2 min-h-12 transition-colors ${
-                filenameOrderMode ? 'bg-accent text-button-text' : 'bg-surface hover:bg-card-active text-text-primary'
-              }`}
-              onClick={handleToggleFilenameOrderMode}
-              data-tooltip={
-                filenameOrderMode
-                  ? 'Order mode: H/J/K/L navigate, A/S move, Shift+A/S moves 10. Renames files with RR_ prefixes.'
-                  : 'Enable filename order mode'
-              }
-            >
-              {filenameOrderPending ? <Loader2 size={16} className="animate-spin shrink-0" /> : <ArrowUpDown size={16} />}
-              <span className="text-xs font-semibold whitespace-nowrap">{filenameOrderMode ? 'Order on' : 'Order'}</span>
-            </button>
           )}
           {props.imageList.length > 0 && cacheStatus && (
             <div
