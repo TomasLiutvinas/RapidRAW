@@ -24,7 +24,7 @@ export default function QuickCommentModal({ isOpen, onClose, onSelectImage }: Qu
   const setLibrary = useLibraryStore((state) => state.setLibrary);
   const imageList = useLibraryStore((state) => state.imageList);
   const thumbnails = useProcessStore((state) => state.thumbnails);
-  const sortedImageList = useSortedLibrary();
+  const { displayList: sortedImageList } = useSortedLibrary();
   const { handleUpdateExif } = useLibraryActions();
   const [comment, setComment] = useState('');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -65,10 +65,11 @@ export default function QuickCommentModal({ isOpen, onClose, onSelectImage }: Qu
     let objectUrl: string | null = null;
 
     const timer = window.setTimeout(() => {
-      invoke(Invokes.GeneratePreviewForPath, { path: target.path, jsAdjustments: {} })
-        .then((res: any) => {
+      invoke<number[]>(Invokes.GeneratePreviewForPath, { path: target.path, jsAdjustments: {} })
+        .then((res) => {
           if (cancelled) return;
-          const blob = new Blob([new Uint8Array(res)], { type: 'image/jpeg' });
+          const bytes = Uint8Array.from(res);
+          const blob = new Blob([bytes.buffer], { type: 'image/jpeg' });
           objectUrl = URL.createObjectURL(blob);
           setPreviewPath(target.path);
           setPreviewUrl(objectUrl);
