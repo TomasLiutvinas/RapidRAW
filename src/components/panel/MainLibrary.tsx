@@ -437,12 +437,12 @@ export default function MainLibrary(props: MainLibraryProps) {
                     <p>
                       {t('library.splash.imagesBy')}{' '}
                       <a
-                        href="https://instagram.com/timonkaech.photography"
+                        href="https://www.instagram.com/liutvis/"
                         className="hover:underline"
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        Timon Käch
+                        Tomas Liutvinas
                       </a>
                     </p>
                     {appVersion && (
