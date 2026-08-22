@@ -22,6 +22,9 @@ export interface TargetAlbumFeedback {
   token: number;
 }
 
+const normalizeSortCriteria = (criteria: SortCriteria): SortCriteria =>
+  criteria.key === 'manual_order' ? { key: 'name', order: SortDirection.Ascending } : criteria;
+
 interface LibraryState {
   // Paths & Trees
   rootPaths: string[];
@@ -44,8 +47,8 @@ interface LibraryState {
   selectionAnchorPath: string | null;
   libraryActivePath: string | null;
   libraryActiveAdjustments: Adjustments;
-  filenameOrderMode: boolean;
   filenameOrderPending: boolean;
+  filenameOrderPreviewPaths: string[] | null;
 
   // Sorting & Filtering
   sortCriteria: SortCriteria;
@@ -86,8 +89,8 @@ export const useLibraryStore = create<LibraryState>((set) => ({
   selectionAnchorPath: null,
   libraryActivePath: null,
   libraryActiveAdjustments: INITIAL_ADJUSTMENTS,
-  filenameOrderMode: false,
   filenameOrderPending: false,
+  filenameOrderPreviewPaths: null,
 
   sortCriteria: { key: 'name', order: SortDirection.Ascending },
   filterCriteria: { colors: [], rating: 0, rawStatus: RawStatus.All },
@@ -127,7 +130,8 @@ export const useLibraryStore = create<LibraryState>((set) => ({
 
   setSortCriteria: (criteria) =>
     set((state) => ({
-      sortCriteria:
+      sortCriteria: normalizeSortCriteria(
         typeof criteria === 'function' ? criteria(state.sortCriteria) : { ...state.sortCriteria, ...criteria },
+      ),
     })),
 }));

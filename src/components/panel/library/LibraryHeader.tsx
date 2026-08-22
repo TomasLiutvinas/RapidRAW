@@ -530,6 +530,12 @@ export function ViewOptionsDropdown({
     (filterCriteria.editedStatus && filterCriteria.editedStatus !== EditedStatus.All) ||
     (filterCriteria.colors && filterCriteria.colors.length > 0);
 
+  useEffect(() => {
+    if (!sortOptions.some((option: any) => option.key === sortCriteria.key)) {
+      setSortCriteria({ key: 'name', order: SortDirection.Ascending });
+    }
+  }, [sortCriteria.key, sortOptions, setSortCriteria]);
+
   const [lastClickedColor, setLastClickedColor] = useState<string | null>(null);
   const allColors = useMemo(() => [...COLOR_LABELS, { name: 'none', color: '#9ca3af' }], []);
 

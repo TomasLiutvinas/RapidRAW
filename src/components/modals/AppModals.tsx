@@ -165,7 +165,11 @@ export default function AppModals(props: AppModalsProps) {
         selectedPath={selectedImage?.path || libraryActivePath}
         thumbnails={thumbnails}
       />
-      <QuickCommentModal isOpen={isQuickCommentModalOpen} onClose={() => setUI({ isQuickCommentModalOpen: false })} />
+      <QuickCommentModal
+        isOpen={isQuickCommentModalOpen}
+        onClose={() => setUI({ isQuickCommentModalOpen: false })}
+        onSelectImage={props.handleImageSelect}
+      />
       <KeybindMapModal isOpen={isKeybindMapOpen} onClose={() => setUI({ isKeybindMapOpen: false })} />
       <CopyPasteSettingsModal
         isOpen={isCopyPasteSettingsModalOpen}

@@ -1,4 +1,3 @@
-export const FILENAME_ORDER_KEY = 'manual_order';
 export const FILENAME_ORDER_PREFIX_REGEX = /^RR_\d{8}__(.+)$/;
 
 export const stripFilenameOrderPrefix = (fileName: string): string => {
