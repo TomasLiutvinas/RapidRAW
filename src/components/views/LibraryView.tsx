@@ -32,6 +32,7 @@ interface LibraryViewProps {
   handleContinueSession: (...args: any) => void;
   handleGoHome: (...args: any) => void;
   handleOpenFolder: (...args: any) => void;
+  handleBrowseCard: (...args: any) => void;
   handleImportClick: (path: string) => void;
   handleLibraryRefresh: () => Promise<void>;
   handleCopyAdjustments: () => void;
@@ -59,6 +60,7 @@ export default function LibraryView({
   handleContinueSession,
   handleGoHome,
   handleOpenFolder,
+  handleBrowseCard,
   handleImportClick,
   handleLibraryRefresh,
   handleCopyAdjustments,
@@ -75,6 +77,7 @@ export default function LibraryView({
 
   const {
     rootPaths,
+    cardBrowseRoot,
     currentFolderPath,
     libraryActivePath,
     multiSelectedPaths,
@@ -85,6 +88,7 @@ export default function LibraryView({
   } = useLibraryStore(
     useShallow((state) => ({
       rootPaths: state.rootPaths,
+      cardBrowseRoot: state.cardBrowseRoot,
       currentFolderPath: state.currentFolderPath,
       libraryActivePath: state.libraryActivePath,
       multiSelectedPaths: state.multiSelectedPaths,
@@ -154,6 +158,8 @@ export default function LibraryView({
             onImportClick={() => handleImportClick(currentFolderPath as string)}
             onLibraryRefresh={handleLibraryRefresh}
             onOpenFolder={handleOpenFolder}
+            onBrowseCard={handleBrowseCard}
+            cardBrowseRoot={cardBrowseRoot}
             onSettingsChange={handleSettingsChange}
             onThumbnailAspectRatioChange={setThumbnailAspectRatio}
             onThumbnailSizeChange={setThumbnailSize}

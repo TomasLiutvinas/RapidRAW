@@ -43,8 +43,10 @@ export function useAppNavigation({ clearThumbnailQueue, refs }: AppNavigationPro
   } = refs;
 
   const handleGoHome = useCallback(() => {
+    void invoke(Invokes.SetCardBrowseRoot, { path: null });
     useLibraryStore.getState().setLibrary({
       rootPaths: [],
+      cardBrowseRoot: null,
       currentFolderPath: null,
       activeAlbumId: null,
       imageList: [],
@@ -396,7 +398,7 @@ export function useAppNavigation({ clearThumbnailQueue, refs }: AppNavigationPro
           setLibrary({ imageList: files });
         }
 
-        if (!preserveEditor) {
+        if (!preserveEditor && !useLibraryStore.getState().cardBrowseRoot) {
           invoke(Invokes.StartBackgroundIndexing, { folderPath: path }).catch((err) => {
             console.error('Failed to start background indexing:', err);
           });
@@ -459,6 +461,8 @@ export function useAppNavigation({ clearThumbnailQueue, refs }: AppNavigationPro
     const isAndroid = osPlatform === 'android';
 
     try {
+      await invoke(Invokes.SetCardBrowseRoot, { path: null });
+      setLibrary({ cardBrowseRoot: null });
       let selectedPath = '';
       if (isAndroid) {
         selectedPath = await invoke<string>(Invokes.GetOrCreateInternalLibraryRoot);
@@ -498,6 +502,36 @@ export function useAppNavigation({ clearThumbnailQueue, refs }: AppNavigationPro
     } catch (err) {
       console.error(isAndroid ? 'Failed to open Android library root:' : 'Failed to open directory dialog:', err);
       toast.error(isAndroid ? 'Failed to open library.' : 'Failed to open folder selection dialog.');
+    }
+  };
+
+  const handleBrowseCard = async () => {
+    const { osPlatform, appSettings } = useSettingsStore.getState();
+    if (osPlatform === 'android') return;
+
+    try {
+      const selected = await open({ directory: true, multiple: false });
+      if (typeof selected !== 'string' || !selected) return;
+
+      await invoke(Invokes.SetCardBrowseRoot, { path: selected });
+      const newTree = await invoke(Invokes.GetFolderTree, {
+        path: selected,
+        expandedFolders: [selected],
+        showImageCounts: appSettings?.enableFolderImageCounts || appSettings?.folderTreeSort?.key === 'imageCount',
+      });
+
+      useLibraryStore.getState().setLibrary({
+        rootPaths: [selected],
+        cardBrowseRoot: selected,
+        folderTrees: [newTree],
+        expandedFolders: new Set([selected]),
+      });
+      await handleSelectSubfolder(selected, false);
+      toast.success('Card opened in read-only mode. Import photos before editing them.');
+    } catch (err) {
+      await invoke(Invokes.SetCardBrowseRoot, { path: null }).catch(() => undefined);
+      useLibraryStore.getState().setLibrary({ cardBrowseRoot: null });
+      toast.error(`Failed to browse card: ${err}`);
     }
   };
 
@@ -610,6 +644,7 @@ export function useAppNavigation({ clearThumbnailQueue, refs }: AppNavigationPro
     handleSelectSubfolder,
     handleSelectAlbum,
     handleOpenFolder,
+    handleBrowseCard,
     handleContinueSession,
   };
 }

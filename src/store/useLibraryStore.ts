@@ -28,6 +28,7 @@ const normalizeSortCriteria = (criteria: SortCriteria): SortCriteria =>
 interface LibraryState {
   // Paths & Trees
   rootPaths: string[];
+  cardBrowseRoot: string | null;
   currentFolderPath: string | null;
   expandedFolders: Set<string>;
   folderTrees: any[];
@@ -72,6 +73,7 @@ interface LibraryState {
 
 export const useLibraryStore = create<LibraryState>((set) => ({
   rootPaths: [],
+  cardBrowseRoot: null,
   currentFolderPath: null,
   expandedFolders: new Set<string>(),
   folderTrees: [],
