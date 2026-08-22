@@ -129,6 +129,7 @@ export default function LibraryView({
             onBackToLibrary={() => setUI({ activeView: 'library' })}
             supportedTypes={supportedTypes}
             imageList={sortedImageList}
+            hasUnfilteredImages={imageList.length > 0}
             currentFolderPath={currentFolderPath}
           />
         ) : (

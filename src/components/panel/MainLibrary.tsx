@@ -61,6 +61,7 @@ interface MainLibraryProps {
   cardBrowseRoot: string | null;
   groupBadgeInfo: Map<GroupId, GroupBadgeInfo> | null;
   imageList: Array<ImageFile>;
+  hasUnfilteredImages: boolean;
   imageRatings: Record<string, number>;
   importState: ImportState;
   indexingProgress: Progress;
@@ -669,6 +670,26 @@ export default function MainLibrary(props: MainLibraryProps) {
                   : t('library.status.processing')}
           </Text>
           <Text className="mt-2">{t('library.status.moment')}</Text>
+        </div>
+      ) : !props.hasUnfilteredImages && props.libraryViewMode === LibraryViewMode.Flat && props.currentFolderPath ? (
+        <div className="flex-1 flex flex-col items-center justify-center text-center">
+          <Folder className="h-12 w-12 mb-4 text-text-secondary" />
+          <Text variant={TextVariants.heading} color={TextColors.secondary}>
+            No photos directly in this folder
+          </Text>
+          <Text className="mt-2 mb-4 max-w-md">Its subfolders may contain photos.</Text>
+          <Button
+            className="rounded-md px-4 h-11 flex items-center justify-center"
+            onClick={async () => {
+              props.setLibraryViewMode(LibraryViewMode.Recursive);
+              if (props.appSettings) {
+                await props.onSettingsChange({ ...props.appSettings, libraryViewMode: LibraryViewMode.Recursive });
+              }
+              await props.onLibraryRefresh();
+            }}
+          >
+            Show photos from subfolders
+          </Button>
         </div>
       ) : searchCriteria.tags.length > 0 || searchCriteria.text ? (
         <div
