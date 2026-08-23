@@ -47,6 +47,8 @@ port the behavior to the new architecture instead of restoring an obsolete file 
 - Automatic XMP import, AI indexing, sidecar repair, edits, ratings, labels, tags, comments,
   duplicates, virtual copies, rename/reorder, move, and delete operations must not write below the
   guarded card root.
+- Opening or navigating photos in the editor must suppress normal debounced autosave, not merely
+  rely on the backend rejection (previewing must not produce error toasts).
 - Thumbnail and preview caches may be written only to the application cache.
 - Copy/import operations may read from the card and write to a destination outside the card.
 - Leaving Card mode clears the backend guard.
