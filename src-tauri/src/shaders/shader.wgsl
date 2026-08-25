@@ -115,6 +115,10 @@ struct GlobalAdjustments {
     halation_amount: f32,
     flare_amount: f32,
     sharpness_threshold: f32,
+    sharpen_radius: f32,
+    sharpen_detail: f32,
+    _pad_sharpen1: f32,
+    _pad_sharpen2: f32,
 }
 
 struct MaskAdjustments {

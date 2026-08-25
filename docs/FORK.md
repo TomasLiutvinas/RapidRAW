@@ -36,6 +36,8 @@ port the behavior to the new architecture instead of restoring an obsolete file 
 - Preserve the custom crop/rotation responsiveness work where it is not superseded upstream.
 - Preserve the custom levels controls.
 - Prefer upstream's current sharpening implementation when it has replaced the old shader pipeline.
+- Keep the Rust `GlobalAdjustments` GPU uniform byte-for-byte aligned with the matching WGSL
+  `GlobalAdjustments` struct. A layout mismatch corrupts later fields such as export tile offsets.
 - Preserve custom preview, RAW fallback, tooltip, settings-limit, and responsiveness improvements
   when compatible with current upstream APIs.
 
@@ -125,6 +127,8 @@ npm run tauri build -- --no-bundle
 - Search and quick-search select the expected image.
 - Quick comments preview, save, close, and navigate correctly.
 - Crop, rotation, zoom, levels, and sharpening render and save.
+- Export an image larger than the 2048 px GPU tile size and verify that it is a single continuous
+  image, without repeated tiles or seams.
 - Ratings, tags, labels, rename, move, delete, virtual copies, and filename ordering work in a normal
   library.
 - Card mode opens without persisting the card path.
