@@ -74,6 +74,9 @@ Rebuild that binary with:
 npm run tauri build -- --no-bundle
 ```
 
+Do not replace this with `cargo build --release`: plain Cargo does not apply Tauri's production
+configuration and produces a binary that tries to load `http://localhost:1420`.
+
 The fork's configured package targets are `deb` and `rpm`; AppImage packaging is intentionally
 disabled because `linuxdeploy` is not part of this workflow.
 
