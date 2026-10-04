@@ -32,7 +32,7 @@ export const useKeyboardShortcuts = ({
   handleZoomChange,
 }: KeyboardShortcutsProps) => {
   const { handleRotate, handleCopyAdjustments, handlePasteAdjustments } = useEditorActions();
-  const { handleRate, handleSetColorLabel } = useLibraryActions();
+  const { handleRate, handleSetColorLabel, handleRemoveFromAlbum } = useLibraryActions();
 
   const sortedListRef = useRef(sortedImageList);
   useEffect(() => {
@@ -121,6 +121,20 @@ export const useKeyboardShortcuts = ({
         execute: (e: any, s: any) => {
           e.preventDefault();
           handleCopyImagePaths(getImagePathsForCopy(s));
+        },
+      },
+      remove_from_album: {
+        shouldFire: (s: any) =>
+          s.ui.activeView === 'library' &&
+          !!s.library.activeAlbumId &&
+          (s.library.multiSelectedPaths.length > 0 || !!s.library.libraryActivePath),
+        execute: (e: KeyboardEvent, s: any) => {
+          e.preventDefault();
+          if (e.repeat) return;
+          const paths = s.library.multiSelectedPaths.length > 0
+            ? s.library.multiSelectedPaths
+            : [s.library.libraryActivePath];
+          void handleRemoveFromAlbum(paths);
         },
       },
       copy_files: {
@@ -692,5 +706,6 @@ export const useKeyboardShortcuts = ({
     handlePasteAdjustments,
     handleRate,
     handleSetColorLabel,
+    handleRemoveFromAlbum,
   ]);
 };

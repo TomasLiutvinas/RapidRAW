@@ -38,6 +38,12 @@ export const KEYBIND_DEFINITIONS: KeybindDefinition[] = [
     section: 'library',
   },
   {
+    action: 'remove_from_album',
+    description: 'settings.keybinds.actions.remove_from_album',
+    defaultCombo: ['shift', 'KeyQ'],
+    section: 'library',
+  },
+  {
     action: 'toggle_comment_overlay',
     description: 'settings.keybinds.actions.toggle_comment_overlay',
     defaultCombo: ['KeyC'],

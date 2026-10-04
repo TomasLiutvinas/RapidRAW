@@ -1634,6 +1634,7 @@
         "zoom_out_step": "Zoom out (by step)",
         "fuzzy_search": "Quick search pictures",
         "toggle_target_album": "Toggle target album membership",
+        "remove_from_album": "Remove selected images from current album",
         "edit_photo_comment": "Edit photo comment",
         "toggle_comment_overlay": "Show/hide photo comment",
         "toggle_keybind_map": "Show shortcut map"

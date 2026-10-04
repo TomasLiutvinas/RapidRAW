@@ -435,6 +435,48 @@ export function useLibraryActions(handleImageSelect?: (path: string, openInEdito
     }
   }, []);
 
+  const handleRemoveFromAlbum = useCallback(async (paths: string[]) => {
+    const { activeAlbumId } = useLibraryStore.getState();
+    if (!activeAlbumId || paths.length === 0) return;
+
+    try {
+      const tree = await invoke<AlbumItem[]>(Invokes.GetAlbums);
+      const album = (function findAlbum(items: AlbumItem[]): Album | undefined {
+        for (const item of items) {
+          if (item.type === 'album' && item.id === activeAlbumId) return item;
+          if (item.type === 'group') {
+            const found = findAlbum(item.children);
+            if (found) return found;
+          }
+        }
+      })(tree);
+      if (!album) return;
+
+      const selected = new Set(paths);
+      const remaining = album.images.filter((path) => !selected.has(path));
+      if (remaining.length === album.images.length) return;
+      album.images = remaining;
+      await invoke(Invokes.SaveAlbums, { tree });
+      const savedTree = await invoke<AlbumItem[]>(Invokes.GetAlbums);
+
+      useLibraryStore.getState().setLibrary((state) => {
+        if (state.activeAlbumId !== activeAlbumId) return { albumTree: savedTree };
+        const imageList = state.imageList.filter((image) => !selected.has(image.path));
+        const nextIndex = state.imageList.findIndex((image) => selected.has(image.path));
+        const nextPath = imageList[Math.min(Math.max(nextIndex, 0), imageList.length - 1)]?.path ?? null;
+        return {
+          albumTree: savedTree,
+          imageList,
+          multiSelectedPaths: nextPath ? [nextPath] : [],
+          libraryActivePath: nextPath,
+          selectionAnchorPath: nextPath,
+        };
+      });
+    } catch (err) {
+      toast.error(`Failed to remove images from album: ${err}`);
+    }
+  }, []);
+
   return {
     handleRate,
     handleSetColorLabel,
@@ -447,5 +489,6 @@ export function useLibraryActions(handleImageSelect?: (path: string, openInEdito
     handleTogglePinFolder,
     handleCreateAlbumItem,
     handleRenameAlbumItem,
+    handleRemoveFromAlbum,
   };
 }

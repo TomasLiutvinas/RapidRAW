@@ -61,7 +61,6 @@ import {
   Panel,
   RawStatus,
   AlbumItem,
-  Album,
   AlbumGroup,
 } from '../components/ui/AppProperties';
 import { Color, COLOR_LABELS, INITIAL_ADJUSTMENTS, normalizeLoadedAdjustments } from '../utils/adjustments';
@@ -94,7 +93,7 @@ export function useAppContextMenus(props: UseAppContextMenusProps) {
     handlePasteAdjustments,
     handleZoomChange,
   } = useEditorActions();
-  const { handleRate, handleSetColorLabel, handleTagsChanged } = useLibraryActions();
+  const { handleRate, handleSetColorLabel, handleTagsChanged, handleRemoveFromAlbum } = useLibraryActions();
 
   const albumIcons = useMemo(
     () => [
@@ -508,47 +507,6 @@ export function useAppContextMenus(props: UseAppContextMenusProps) {
         setPanel(Panel.Export);
       };
 
-      const handleRemoveFromAlbum = async () => {
-        if (!activeAlbumId) return;
-        const newTree = JSON.parse(JSON.stringify(albumTree));
-
-        const removeImages = (nodes: AlbumItem[]): boolean => {
-          for (const n of nodes) {
-            if (n.id === activeAlbumId && n.type === 'album') {
-              (n as Album).images = (n as Album).images.filter((p) => !finalSelection.includes(p));
-              return true;
-            } else if (n.type === 'group') {
-              if (removeImages(n.children)) return true;
-            }
-          }
-          return false;
-        };
-
-        if (removeImages(newTree)) {
-          try {
-            await invoke(Invokes.SaveAlbums, { tree: newTree });
-            const sortedTree = await invoke<AlbumItem[]>(Invokes.GetAlbums);
-            setLibrary({ albumTree: sortedTree });
-
-            const albumObj = sortedTree.reduce((acc: any, cur: any) => {
-              const find = (n: any): any =>
-                n.id === activeAlbumId
-                  ? n
-                  : n.type === 'group'
-                    ? n.children.reduce((a: any, c: any) => a || find(c), null)
-                    : null;
-              return acc || find(cur);
-            }, null) as Album;
-
-            if (albumObj) {
-              setLibrary({ imageList: imageList.filter((i) => albumObj.images.includes(i.path)) });
-            }
-          } catch (e) {
-            toast.error(t('contextMenus.toasts.failedRemoveImages', { err: e }));
-          }
-        }
-      };
-
       const options = [
         ...(!isEditingThisImage
           ? [
@@ -785,7 +743,7 @@ export function useAppContextMenus(props: UseAppContextMenusProps) {
                 label: t('contextMenus.thumbnail.removeFromAlbum', { count: selectionCount }),
                 icon: Trash2,
                 isDestructive: true,
-                onClick: handleRemoveFromAlbum,
+                onClick: () => handleRemoveFromAlbum(finalSelection),
               },
             ]
           : []),
