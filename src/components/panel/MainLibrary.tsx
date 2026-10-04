@@ -16,6 +16,7 @@ import {
   Columns,
   SlidersHorizontal,
   Rows3,
+  MemoryStick,
 } from 'lucide-react';
 import CullingView from './library/CullingView';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -62,8 +63,10 @@ interface MainLibraryProps {
   aiModelDownloadStatus: string | null;
   appSettings: AppSettings | null;
   currentFolderPath: string | null;
+  cardBrowseRoot: string | null;
   groupBadgeInfo: Map<GroupId, GroupBadgeInfo> | null;
   imageList: Array<ImageFile>;
+  hasUnfilteredImages: boolean;
   imageRatings: Record<string, number>;
   importState: ImportState;
   indexingProgress: Progress;
@@ -83,6 +86,7 @@ interface MainLibraryProps {
   onImportClick(): void;
   onLibraryRefresh(): void;
   onOpenFolder(): void;
+  onBrowseCard(): void;
   onSettingsChange(settings: AppSettings): Promise<void>;
   onThumbnailAspectRatioChange(aspectRatio: ThumbnailAspectRatio): void;
   onThumbnailSizeChange(size: ThumbnailSize): void;
@@ -342,7 +346,7 @@ export default function MainLibrary(props: MainLibraryProps) {
             <AnimatePresence>
               <motion.img
                 alt="Splash screen background"
-                className="absolute inset-0 w-full h-full object-cover"
+                className="absolute inset-0 w-full h-full object-cover object-bottom"
                 key={splashImage}
                 src={splashImage}
               />
@@ -356,7 +360,7 @@ export default function MainLibrary(props: MainLibraryProps) {
                   <motion.img
                     key={splashImage + '-ambient'}
                     src={splashImage}
-                    className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-50 pointer-events-none scale-110"
+                    className="absolute inset-0 w-full h-full object-cover object-bottom blur-2xl opacity-50 pointer-events-none scale-110"
                     aria-hidden="true"
                   />
                 )}
@@ -430,6 +434,15 @@ export default function MainLibrary(props: MainLibraryProps) {
                           <Settings size={20} />
                         </Button>
                       </div>
+                      {!props.isAndroid && (
+                        <Button
+                          className="rounded-md h-11 w-full flex justify-center items-center bg-surface text-text-primary shadow-md transition-transform duration-200 hover:scale-[1.01] active:scale-[.98]"
+                          onClick={props.onBrowseCard}
+                          size="lg"
+                        >
+                          <MemoryStick size={20} className="mr-2" /> Browse SD card safely
+                        </Button>
+                      )}
                     </div>
                   </div>
 
@@ -441,12 +454,12 @@ export default function MainLibrary(props: MainLibraryProps) {
                     <p>
                       {t('library.splash.imagesBy')}{' '}
                       <a
-                        href="https://instagram.com/timonkaech.photography"
+                        href="https://www.instagram.com/liutvis/"
                         className="hover:underline"
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        Timon Käch
+                        Tomas Liutvinas
                       </a>
                     </p>
                     {appVersion && (
@@ -520,6 +533,11 @@ export default function MainLibrary(props: MainLibraryProps) {
       >
         <div className="min-w-0">
           <Text variant={TextVariants.headline}>{t('library.header.title')}</Text>
+          {props.cardBrowseRoot && (
+            <div className="mt-1 flex items-center gap-1 text-xs font-semibold text-emerald-400">
+              <MemoryStick size={14} /> Card mode · read-only
+            </div>
+          )}
           {!props.isAndroid && (
             <div className="flex items-center gap-2">
               {props.currentFolderPath ? (
@@ -597,6 +615,15 @@ export default function MainLibrary(props: MainLibraryProps) {
               flagStatusOptions={translatedFlagStatusOptions}
               sortOptions={translatedSortOptions}
             />
+            {!props.isAndroid && !props.cardBrowseRoot && (
+              <Button
+                className="h-12 w-12 bg-transparent text-text-primary shadow-none p-0 flex items-center justify-center"
+                onClick={props.onBrowseCard}
+                data-tooltip="Browse SD card safely"
+              >
+                <MemoryStick className="w-5 h-5" />
+              </Button>
+            )}
             {!props.isAndroid && (
               <Button
                 className="h-12 w-12 bg-transparent text-text-primary shadow-none p-0 flex items-center justify-center"
@@ -648,6 +675,26 @@ export default function MainLibrary(props: MainLibraryProps) {
                   : t('library.status.processing')}
           </Text>
           <Text className="mt-2">{t('library.status.moment')}</Text>
+        </div>
+      ) : !props.hasUnfilteredImages && props.libraryViewMode === LibraryViewMode.Flat && props.currentFolderPath ? (
+        <div className="flex-1 flex flex-col items-center justify-center text-center">
+          <Folder className="h-12 w-12 mb-4 text-text-secondary" />
+          <Text variant={TextVariants.heading} color={TextColors.secondary}>
+            No photos directly in this folder
+          </Text>
+          <Text className="mt-2 mb-4 max-w-md">Its subfolders may contain photos.</Text>
+          <Button
+            className="rounded-md px-4 h-11 flex items-center justify-center"
+            onClick={async () => {
+              props.setLibraryViewMode(LibraryViewMode.Recursive);
+              if (props.appSettings) {
+                await props.onSettingsChange({ ...props.appSettings, libraryViewMode: LibraryViewMode.Recursive });
+              }
+              await props.onLibraryRefresh();
+            }}
+          >
+            Show photos from subfolders
+          </Button>
         </div>
       ) : searchCriteria.tags.length > 0 || searchCriteria.text ? (
         <div

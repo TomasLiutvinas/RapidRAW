@@ -27,6 +27,42 @@ export const KEYBIND_DEFINITIONS: KeybindDefinition[] = [
     section: 'library',
   },
   {
+    action: 'fuzzy_search',
+    description: 'settings.keybinds.actions.fuzzy_search',
+    defaultCombo: ['Slash'],
+    section: 'library',
+  },
+  {
+    action: 'toggle_target_album',
+    description: 'settings.keybinds.actions.toggle_target_album',
+    defaultCombo: ['KeyQ'],
+    section: 'library',
+  },
+  {
+    action: 'remove_from_album',
+    description: 'settings.keybinds.actions.remove_from_album',
+    defaultCombo: ['shift', 'KeyQ'],
+    section: 'library',
+  },
+  {
+    action: 'toggle_comment_overlay',
+    description: 'settings.keybinds.actions.toggle_comment_overlay',
+    defaultCombo: ['KeyC'],
+    section: 'library',
+  },
+  {
+    action: 'edit_photo_comment',
+    description: 'settings.keybinds.actions.edit_photo_comment',
+    defaultCombo: ['KeyN'],
+    section: 'library',
+  },
+  {
+    action: 'toggle_keybind_map',
+    description: 'settings.keybinds.actions.toggle_keybind_map',
+    defaultCombo: ['shift', 'Slash'],
+    section: 'library',
+  },
+  {
     action: 'copy_files',
     description: 'settings.keybinds.actions.copy_files',
     defaultCombo: ['ctrl', 'shift', 'KeyC'],
@@ -414,4 +450,23 @@ export function formatKeyCode(key: string, osPlatform: string): string {
   if (key === 'Delete' && osPlatform === 'macos') return 'Delete / ⌘+⌫';
   const label = codeToDisplayLabel(key);
   return label || key;
+}
+
+export function getShortcutLabel(
+  action: string,
+  keybinds: { [action: string]: string[] } | undefined,
+  osPlatform: string,
+): string | null {
+  const def = KEYBIND_DEFINITIONS.find((entry) => entry.action === action);
+  if (!def) return null;
+
+  const userCombo = keybinds?.[action];
+  const combo = userCombo && userCombo.length > 0 ? userCombo : def.defaultCombo;
+  if (!combo || combo.length === 0) return null;
+
+  return combo.map((key) => formatKeyCode(key, osPlatform)).join(' + ');
+}
+
+export function appendShortcutToTooltip(tooltip: string, shortcut: string | null): string {
+  return shortcut ? `${tooltip} (${shortcut})` : tooltip;
 }

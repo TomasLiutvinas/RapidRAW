@@ -172,6 +172,24 @@ export interface ParametricCurve {
   red: ParametricCurveSettings;
 }
 
+export type CurveMode = 'point' | 'parametric' | 'levels';
+
+export interface LevelsSettings {
+  inputBlack: number;
+  gamma: number;
+  inputWhite: number;
+  outputBlack: number;
+  outputWhite: number;
+}
+
+export interface Levels {
+  [index: string]: LevelsSettings;
+  blue: LevelsSettings;
+  green: LevelsSettings;
+  luma: LevelsSettings;
+  red: LevelsSettings;
+}
+
 export interface Adjustments {
   [index: string]: any;
   aiPatches: Array<AiPatch>;
@@ -189,7 +207,8 @@ export interface Adjustments {
   curves: Curves;
   pointCurves?: Curves;
   parametricCurve?: ParametricCurve;
-  curveMode?: 'point' | 'parametric';
+  levels?: Levels;
+  curveMode?: CurveMode;
   crop: Crop | null;
   dehaze: number;
   exposure: number;
@@ -338,7 +357,8 @@ export interface MaskAdjustments {
   curves: Curves;
   pointCurves?: Curves;
   parametricCurve?: ParametricCurve;
-  curveMode?: 'point' | 'parametric';
+  levels?: Levels;
+  curveMode?: CurveMode;
   dehaze: number;
   exposure: number;
   flareAmount: number;
@@ -428,6 +448,14 @@ export const DEFAULT_PARAMETRIC_CURVE_SETTINGS: ParametricCurveSettings = {
   split3: 75,
 };
 
+export const DEFAULT_LEVELS_SETTINGS: LevelsSettings = {
+  inputBlack: 0,
+  gamma: 1,
+  inputWhite: 255,
+  outputBlack: 0,
+  outputWhite: 255,
+};
+
 const getDefaultParametricCurve = (): ParametricCurve => ({
   luma: { ...DEFAULT_PARAMETRIC_CURVE_SETTINGS },
   red: { ...DEFAULT_PARAMETRIC_CURVE_SETTINGS },
@@ -454,6 +482,13 @@ export const getDefaultCurves = (): Curves => ({
   ],
 });
 
+export const getDefaultLevels = (): Levels => ({
+  luma: { ...DEFAULT_LEVELS_SETTINGS },
+  red: { ...DEFAULT_LEVELS_SETTINGS },
+  green: { ...DEFAULT_LEVELS_SETTINGS },
+  blue: { ...DEFAULT_LEVELS_SETTINGS },
+});
+
 export const DEFAULT_PARAMETRIC_CURVE = getDefaultParametricCurve();
 
 export const INITIAL_MASK_ADJUSTMENTS: MaskAdjustments = {
@@ -466,6 +501,7 @@ export const INITIAL_MASK_ADJUSTMENTS: MaskAdjustments = {
   curves: getDefaultCurves(),
   pointCurves: getDefaultCurves(),
   parametricCurve: getDefaultParametricCurve(),
+  levels: getDefaultLevels(),
   curveMode: 'point',
   dehaze: 0,
   exposure: 0,
@@ -529,6 +565,7 @@ export const INITIAL_ADJUSTMENTS: Adjustments = {
   curves: getDefaultCurves(),
   pointCurves: getDefaultCurves(),
   parametricCurve: getDefaultParametricCurve(),
+  levels: getDefaultLevels(),
   curveMode: 'point',
   dehaze: 0,
   exposure: 0,
@@ -640,6 +677,13 @@ const deepCloneParametric = (pCurve: any): ParametricCurve => ({
   blue: { ...DEFAULT_PARAMETRIC_CURVE_SETTINGS, ...(pCurve?.blue || {}) },
 });
 
+const deepCloneLevels = (levels: Levels | undefined): Levels => ({
+  luma: { ...DEFAULT_LEVELS_SETTINGS, ...(levels?.luma || {}) },
+  red: { ...DEFAULT_LEVELS_SETTINGS, ...(levels?.red || {}) },
+  green: { ...DEFAULT_LEVELS_SETTINGS, ...(levels?.green || {}) },
+  blue: { ...DEFAULT_LEVELS_SETTINGS, ...(levels?.blue || {}) },
+});
+
 export const normalizeLoadedAdjustments = (loadedAdjustments: Adjustments): any => {
   if (!loadedAdjustments) {
     return INITIAL_ADJUSTMENTS;
@@ -679,6 +723,7 @@ export const normalizeLoadedAdjustments = (loadedAdjustments: Adjustments): any 
         parametricCurve: containerAdjustments.parametricCurve
           ? deepCloneParametric(containerAdjustments.parametricCurve)
           : getDefaultParametricCurve(),
+        levels: containerAdjustments.levels ? deepCloneLevels(containerAdjustments.levels) : getDefaultLevels(),
         curveMode: containerAdjustments.curveMode || INITIAL_MASK_ADJUSTMENTS.curveMode,
         sectionVisibility: {
           ...INITIAL_MASK_ADJUSTMENTS.sectionVisibility,
@@ -754,6 +799,7 @@ export const normalizeLoadedAdjustments = (loadedAdjustments: Adjustments): any 
     parametricCurve: loadedAdjustments.parametricCurve
       ? deepCloneParametric(loadedAdjustments.parametricCurve)
       : getDefaultParametricCurve(),
+    levels: loadedAdjustments.levels ? deepCloneLevels(loadedAdjustments.levels) : getDefaultLevels(),
     curveMode: loadedAdjustments.curveMode || INITIAL_ADJUSTMENTS.curveMode,
     masks: normalizedMasks,
     aiPatches: normalizedAiPatches,
@@ -789,7 +835,7 @@ export const ADJUSTMENT_GROUPS: Record<string, AdjustmentGroup[]> = {
     },
     {
       label: 'modals.copyPaste.groups.curves',
-      keys: ['curves', 'pointCurves', 'parametricCurve', 'curveMode'],
+      keys: ['curves', 'pointCurves', 'parametricCurve', 'levels', 'curveMode'],
     },
   ],
   color: [
@@ -815,7 +861,10 @@ export const ADJUSTMENT_GROUPS: Record<string, AdjustmentGroup[]> = {
     },
     {
       label: 'modals.copyPaste.groups.sharpness',
-      keys: [DetailsAdjustment.Sharpness, DetailsAdjustment.SharpnessThreshold],
+      keys: [
+        DetailsAdjustment.Sharpness,
+        DetailsAdjustment.SharpnessThreshold,
+      ],
     },
     {
       label: 'modals.copyPaste.groups.noiseReduction',
@@ -904,7 +953,7 @@ export const ADJUSTMENT_SECTIONS: Sections = {
     BasicAdjustment.Exposure,
     'toneMapper',
   ],
-  curves: ['curves', 'pointCurves', 'parametricCurve', 'curveMode'],
+  curves: ['curves', 'pointCurves', 'parametricCurve', 'levels', 'curveMode'],
   color: [
     ColorAdjustment.Saturation,
     ColorAdjustment.Temperature,

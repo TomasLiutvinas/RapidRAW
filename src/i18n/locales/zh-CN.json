@@ -40,7 +40,10 @@
         "global": "全局",
         "highlights": "高光",
         "midtones": "中间调",
-        "shadows": "阴影"
+        "paletteMode": "调色板模式",
+        "presetAria": "选择 {{name}} 颜色预设",
+        "shadows": "阴影",
+        "wheelMode": "圆形模式"
       },
       "hue": "色相",
       "localHue": "局部色调",
@@ -76,6 +79,15 @@
       "copyParametric": "复制 {{channel}} 参数曲线",
       "copyPoint": "复制 {{channel}} 点曲线",
       "curveDataUnavailable": "曲线数据不可用。",
+      "copyLevels": "Copy {{channel}} Levels",
+      "gamma": "Gamma",
+      "inputBlack": "Input Black",
+      "inputLevels": "Input Levels",
+      "inputWhite": "Input White",
+      "levels": "Levels",
+      "outputBlack": "Output Black",
+      "outputLevels": "Output Levels",
+      "outputWhite": "Output White",
       "parametricCurve": "参数曲线",
       "params": {
         "blackLevel": "黑色色阶",
@@ -86,24 +98,31 @@
         "whiteLevel": "白色色阶"
       },
       "pasteFromParametric": "从参数曲线粘贴",
+      "pasteLevels": "Paste Levels",
       "pasteParametric": "粘贴参数曲线",
       "pastePoint": "粘贴点曲线",
       "pointCurve": "点曲线",
+      "resetAllLevels": "Reset All Levels",
       "resetAllParametric": "重置所有参数曲线",
       "resetAllPoint": "重置所有点曲线",
+      "resetLevels": "Reset {{channel}} Levels",
       "resetParametric": "重置 {{channel}} 参数曲线",
       "resetPoint": "重置 {{channel}} 点曲线"
     },
     "details": {
+      "amount": "Amount",
       "blueYellow": "蓝/黄",
       "centre": "居中",
       "chromaticAberration": "色差",
       "clarity": "清晰度",
       "color": "颜色",
       "dehaze": "去雾",
+      "detail": "Detail",
       "luminance": "亮度",
+      "masking": "Masking",
       "noiseReduction": "降噪",
       "presence": "质感",
+      "radius": "Radius",
       "redCyan": "红/青",
       "sharpening": "锐化",
       "sharpness": "锐度",
@@ -165,7 +184,9 @@
       "newGroup": "新建组",
       "renameAlbum": "重命名相册",
       "renameGroup": "重命名组",
-      "rootDir": "根目录"
+      "rootDir": "根目录",
+      "clearTargetAlbum": "Clear Target Album",
+      "setTargetAlbum": "Set as Target Album"
     },
     "colors": {
       "blue": "蓝色",
@@ -214,6 +235,12 @@
       "copyHere_other": "复制 {{count}} 张图像至此",
       "deleteFolder": "删除文件夹",
       "importImages": "导入图像",
+      "folderMark": "Folder Mark",
+      "marks": {
+        "default": "Default (no mark)",
+        "exported": "Exported (no filtering)",
+        "raw": "RAW source (RAW only)"
+      },
       "moveHere_one": "移动图像至此",
       "moveHere_other": "移动 {{count}} 张图像至此",
       "newFolder": "新建文件夹",
@@ -785,6 +812,11 @@
         "undo": "撤销（Ctrl+Z）或历史记录（右键单击）"
       },
       "vc": "VC"
+    },
+    "comments": {
+      "editTooltip": "Edit comment",
+      "empty": "No comment yet",
+      "toggleTooltip": "Show/hide photo comment"
     }
   },
   "export": {
@@ -1014,7 +1046,12 @@
         "navBack": "后退",
         "navForward": "前进",
         "sortFolders": "对文件夹排序"
-      }
+      },
+      "marks": {
+        "exportedShort": "EXP",
+        "rawShort": "RAW"
+      },
+      "targetAlbum": "Target album"
     },
     "grid": {
       "columns": {
@@ -1511,6 +1548,27 @@
       "yAxis": "Y 轴",
       "zoomInTooltip": "放大",
       "zoomOutTooltip": "缩小"
+    },
+    "fuzzySearch": {
+      "close": "Close quick search",
+      "current": "Current",
+      "hint": "↑↓ select · Enter open · Esc close",
+      "noResults": "No pictures found",
+      "placeholder": "Search pictures by title...",
+      "resultCount": "Showing {{total}}",
+      "searchLabel": "Search pictures"
+    },
+    "quickComment": {
+      "cancel": "Cancel",
+      "close": "Close comment editor",
+      "hint": "Ctrl/⌘ + Enter to save",
+      "placeholder": "Write a short comment for this photo...",
+      "save": "Save",
+      "title": "Photo Comment"
+    },
+    "keybindMap": {
+      "close": "Close shortcut map",
+      "title": "Keyboard Shortcuts"
     }
   },
   "settings": {
@@ -1683,7 +1741,11 @@
         "zoom_in": "放大",
         "zoom_in_step": "放大（步进）",
         "zoom_out": "缩小",
-        "zoom_out_step": "缩小（步进）"
+        "zoom_out_step": "缩小（步进）",
+        "toggle_target_album": "Toggle target album membership",
+        "edit_photo_comment": "Edit photo comment",
+        "toggle_comment_overlay": "Show/hide photo comment",
+        "toggle_keybind_map": "Show shortcut map"
       },
       "sections": {
         "editing": "编辑",

@@ -23,9 +23,19 @@ interface SearchCriteria {
   mode: 'AND' | 'OR';
 }
 
+export interface TargetAlbumFeedback {
+  action: 'added' | 'removed';
+  albumId: string;
+  token: number;
+}
+
+const normalizeSortCriteria = (criteria: SortCriteria): SortCriteria =>
+  criteria.key === 'manual_order' ? { key: 'name', order: SortDirection.Ascending } : criteria;
+
 interface LibraryState {
   // Paths & Trees
   rootPaths: string[];
+  cardBrowseRoot: string | null;
   currentFolderPath: string | null;
   expandedFolders: Set<string>;
   folderTrees: any[];
@@ -34,6 +44,8 @@ interface LibraryState {
   // Albums
   albumTree: AlbumItem[];
   activeAlbumId: string | null;
+  targetAlbumId: string | null;
+  targetAlbumFeedback: TargetAlbumFeedback | null;
   expandedAlbumGroups: Set<string>;
 
   // Images & Selection
@@ -43,6 +55,8 @@ interface LibraryState {
   selectionAnchorPath: string | null;
   libraryActivePath: string | null;
   libraryActiveAdjustments: Adjustments;
+  filenameOrderPending: boolean;
+  filenameOrderPreviewPaths: string[] | null;
 
   // Sorting & Filtering
   sortCriteria: SortCriteria;
@@ -54,6 +68,7 @@ interface LibraryState {
   isViewLoading: boolean;
   libraryScrollTop: number;
   listColumnWidths: ColumnWidths;
+  libraryColumnCount: number;
 
   // Navigation History
   navHistory: NavHistoryItem[];
@@ -70,6 +85,7 @@ interface LibraryState {
 
 export const useLibraryStore = create<LibraryState>((set) => ({
   rootPaths: [],
+  cardBrowseRoot: null,
   currentFolderPath: null,
   expandedFolders: new Set<string>(),
   folderTrees: [],
@@ -77,6 +93,8 @@ export const useLibraryStore = create<LibraryState>((set) => ({
 
   albumTree: [],
   activeAlbumId: null,
+  targetAlbumId: null,
+  targetAlbumFeedback: null,
   expandedAlbumGroups: new Set<string>(),
 
   imageList: [],
@@ -85,6 +103,8 @@ export const useLibraryStore = create<LibraryState>((set) => ({
   selectionAnchorPath: null,
   libraryActivePath: null,
   libraryActiveAdjustments: INITIAL_ADJUSTMENTS,
+  filenameOrderPending: false,
+  filenameOrderPreviewPaths: null,
 
   sortCriteria: { key: 'name', order: SortDirection.Ascending },
   filterCriteria: { colors: [], rating: 0, rawStatus: RawStatus.All },
@@ -93,6 +113,7 @@ export const useLibraryStore = create<LibraryState>((set) => ({
   isTreeLoading: false,
   isViewLoading: false,
   libraryScrollTop: 0,
+  libraryColumnCount: 1,
   listColumnWidths: {
     thumbnail: 4,
     name: 20,
@@ -126,8 +147,9 @@ export const useLibraryStore = create<LibraryState>((set) => ({
 
   setSortCriteria: (criteria) =>
     set((state) => ({
-      sortCriteria:
+      sortCriteria: normalizeSortCriteria(
         typeof criteria === 'function' ? criteria(state.sortCriteria) : { ...state.sortCriteria, ...criteria },
+      ),
     })),
 
   pushNavHistory: (item) =>

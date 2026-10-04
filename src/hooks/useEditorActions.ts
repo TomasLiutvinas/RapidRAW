@@ -23,6 +23,14 @@ export const debouncedSetHistory = debounce((newAdj: Adjustments) => {
 }, 500);
 
 export const debouncedSave = debounce((path: string, adjustmentsToSave: Adjustments) => {
+  const cardRoot = useLibraryStore.getState().cardBrowseRoot;
+  if (cardRoot) {
+    const normalizedRoot = cardRoot.replace(/[\\/]+$/, '');
+    const isCardPath =
+      path === normalizedRoot || path.startsWith(`${normalizedRoot}/`) || path.startsWith(`${normalizedRoot}\\`);
+    if (isCardPath) return;
+  }
+
   invoke(Invokes.SaveMetadataAndUpdateThumbnail, { path, adjustments: adjustmentsToSave }).catch((err) => {
     console.error('Auto-save failed:', err);
     toast.error(`Failed to save changes: ${err}`);
@@ -190,9 +198,7 @@ export function useEditorActions() {
           if (libraryActivePath && pathsToReset.includes(libraryActivePath))
             setLibrary({ libraryActiveAdjustments: { ...INITIAL_ADJUSTMENTS } });
           if (selectedImage && pathsToReset.includes(selectedImage.path)) {
-            const aspect =
-              selectedImage.width && selectedImage.height ? selectedImage.width / selectedImage.height : null;
-            const resetData = { ...INITIAL_ADJUSTMENTS, aspectRatio: aspect, aiPatches: [] };
+            const resetData = { ...INITIAL_ADJUSTMENTS, aspectRatio: null, aiPatches: [] };
             resetHistory(resetData);
             setEditor({ adjustments: resetData });
           }

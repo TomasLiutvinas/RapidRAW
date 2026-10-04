@@ -349,6 +349,7 @@ function App() {
     handleOpenFolder,
     handleNavBack,
     handleNavForward,
+    handleBrowseCard,
     handleContinueSession,
   } = useAppNavigation({
     clearThumbnailQueue,
@@ -970,6 +971,7 @@ function App() {
                     handleContinueSession={handleContinueSession}
                     handleGoHome={handleGoHome}
                     handleOpenFolder={handleOpenFolder}
+                    handleBrowseCard={handleBrowseCard}
                     handleImportClick={handleImportClick}
                     handleLibraryRefresh={handleLibraryRefresh}
                     handleCopyAdjustments={handleCopyAdjustments}

@@ -32,7 +32,7 @@ export const useKeyboardShortcuts = ({
   handleZoomChange,
 }: KeyboardShortcutsProps) => {
   const { handleRotate, handleCopyAdjustments, handlePasteAdjustments, toggleShowOriginal } = useEditorActions();
-  const { handleRate, handleSetFlag, handleToggleFlag, handleSetColorLabel } = useLibraryActions();
+  const { handleRate, handleSetFlag, handleToggleFlag, handleSetColorLabel, handleRemoveFromAlbum } = useLibraryActions();
 
   const sortedListRef = useRef(sortedImageList);
   useEffect(() => {
@@ -96,6 +96,13 @@ export const useKeyboardShortcuts = ({
           handleImageSelect(s.library.libraryActivePath!, true);
         },
       },
+      fuzzy_search: {
+        shouldFire: (s: ReturnType<typeof getStoreState>) => s.library.imageList.length > 0,
+        execute: (e: KeyboardEvent, s: ReturnType<typeof getStoreState>) => {
+          e.preventDefault();
+          s.ui.setUI({ isFuzzySearchModalOpen: true });
+        },
+      },
       copy_adjustments: {
         shouldFire: () => true,
         execute: (e: any) => {
@@ -115,6 +122,20 @@ export const useKeyboardShortcuts = ({
         execute: (e: any, s: any) => {
           e.preventDefault();
           handleCopyImagePaths(getImagePathsForCopy(s));
+        },
+      },
+      remove_from_album: {
+        shouldFire: (s: any) =>
+          s.ui.activeView === 'library' &&
+          !!s.library.activeAlbumId &&
+          (s.library.multiSelectedPaths.length > 0 || !!s.library.libraryActivePath),
+        execute: (e: KeyboardEvent, s: any) => {
+          e.preventDefault();
+          if (e.repeat) return;
+          const paths = s.library.multiSelectedPaths.length > 0
+            ? s.library.multiSelectedPaths
+            : [s.library.libraryActivePath];
+          void handleRemoveFromAlbum(paths);
         },
       },
       copy_files: {
@@ -664,6 +685,7 @@ export const useKeyboardShortcuts = ({
         state.ui.isRenameFileModalOpen ||
         state.ui.isImportModalOpen ||
         state.ui.isCopyPasteSettingsModalOpen ||
+        state.ui.isFuzzySearchModalOpen ||
         state.ui.confirmModalState.isOpen ||
         state.ui.panoramaModalState.isOpen ||
         state.ui.cullingModalState.isOpen ||
@@ -725,5 +747,6 @@ export const useKeyboardShortcuts = ({
     handleToggleFlag,
     handleSetColorLabel,
     toggleShowOriginal,
+    handleRemoveFromAlbum,
   ]);
 };

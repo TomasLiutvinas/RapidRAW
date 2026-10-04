@@ -19,6 +19,9 @@ import ConfirmModal from './ConfirmModal';
 import ImportSettingsModal from './ImportSettingsModal';
 import CullingModal from './CullingModal';
 import CollageModal from './CollageModal';
+import FuzzySearchModal from './FuzzySearchModal';
+import QuickCommentModal from './QuickCommentModal';
+import KeybindMapModal from './KeybindMapModal';
 import { AppSettings, Invokes, ImageFlag, AlbumItem, Album, AlbumGroup } from '../ui/AppProperties';
 import { CopyPasteSettings } from '../../utils/adjustments';
 
@@ -61,6 +64,9 @@ export default function AppModals(props: AppModalsProps) {
     isRenameFileModalOpen,
     isImportModalOpen,
     isCopyPasteSettingsModalOpen,
+    isFuzzySearchModalOpen,
+    isQuickCommentModalOpen,
+    isKeybindMapOpen,
     folderActionTarget,
     renameTargetPaths,
     importSourcePaths,
@@ -84,6 +90,9 @@ export default function AppModals(props: AppModalsProps) {
       isRenameFileModalOpen: state.isRenameFileModalOpen,
       isImportModalOpen: state.isImportModalOpen,
       isCopyPasteSettingsModalOpen: state.isCopyPasteSettingsModalOpen,
+      isFuzzySearchModalOpen: state.isFuzzySearchModalOpen,
+      isQuickCommentModalOpen: state.isQuickCommentModalOpen,
+      isKeybindMapOpen: state.isKeybindMapOpen,
       folderActionTarget: state.folderActionTarget,
       renameTargetPaths: state.renameTargetPaths,
       importSourcePaths: state.importSourcePaths,
@@ -117,6 +126,13 @@ export default function AppModals(props: AppModalsProps) {
     })),
   );
 
+  const { imageList, libraryActivePath } = useLibraryStore(
+    useShallow((state) => ({
+      imageList: state.imageList,
+      libraryActivePath: state.libraryActivePath,
+    })),
+  );
+
   const closeConfirmModal = () => {
     setUI((state) => ({ confirmModalState: { ...state.confirmModalState, isOpen: false } }));
   };
@@ -142,6 +158,20 @@ export default function AppModals(props: AppModalsProps) {
 
   return (
     <>
+      <FuzzySearchModal
+        images={imageList}
+        isOpen={isFuzzySearchModalOpen}
+        onClose={() => setUI({ isFuzzySearchModalOpen: false })}
+        onSelect={props.handleImageSelect}
+        selectedPath={selectedImage?.path || libraryActivePath}
+        thumbnails={thumbnails}
+      />
+      <QuickCommentModal
+        isOpen={isQuickCommentModalOpen}
+        onClose={() => setUI({ isQuickCommentModalOpen: false })}
+        onSelectImage={props.handleImageSelect}
+      />
+      <KeybindMapModal isOpen={isKeybindMapOpen} onClose={() => setUI({ isKeybindMapOpen: false })} />
       <CopyPasteSettingsModal
         isOpen={isCopyPasteSettingsModalOpen}
         onClose={() => setUI({ isCopyPasteSettingsModalOpen: false })}

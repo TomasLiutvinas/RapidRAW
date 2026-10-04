@@ -96,6 +96,7 @@ pub fn all_available_adjustments() -> HashSet<String> {
         "curves",
         "pointCurves",
         "parametricCurve",
+        "levels",
         "curveMode",
         "highlights",
         "shadows",
@@ -114,6 +115,8 @@ pub fn all_available_adjustments() -> HashSet<String> {
         "structure",
         "dehaze",
         "sharpness",
+        "sharpenDetail",
+        "sharpenRadius",
         "sharpnessThreshold",
         "centré",
         "lumaNoiseReduction",
@@ -562,6 +565,8 @@ pub struct AppSettings {
     #[serde(default)]
     pub folder_icons: Option<HashMap<String, String>>,
     #[serde(default)]
+    pub folder_marks: Option<HashMap<String, String>>,
+    #[serde(default)]
     pub raw_preprocessing_color_nr: Option<f32>,
     #[serde(default)]
     pub raw_preprocessing_sharpening: Option<f32>,
@@ -678,6 +683,7 @@ impl Default for AppSettings {
             enable_focus_mode: Some(false),
             enable_tool_focus_mode: Some(false),
             folder_icons: Some(HashMap::new()),
+            folder_marks: Some(HashMap::new()),
             raw_preprocessing_color_nr: Some(0.5),
             raw_preprocessing_sharpening: Some(0.35),
             apply_preprocessing_to_non_raws: Some(false),

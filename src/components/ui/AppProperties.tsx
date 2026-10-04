@@ -10,13 +10,16 @@ export const GLOBAL_KEYS = [
   'ArrowRight',
   'f',
   'b',
+  'c',
   'a',
   's',
   'd',
   'r',
   'm',
+  'n',
   'k',
   'p',
+  'q',
   'i',
   'e',
   '0',
@@ -26,6 +29,7 @@ export const GLOBAL_KEYS = [
   '4',
   '5',
   'Enter',
+  '?',
 ];
 export const OPTION_SEPARATOR = 'separator';
 
@@ -84,6 +88,7 @@ export enum Invokes {
   RemoveTagForPaths = 'remove_tag_for_paths',
   RenameFiles = 'rename_files',
   RenameFolder = 'rename_folder',
+  ReorderFilesByName = 'reorder_files_by_name',
   ResetAdjustmentsForPaths = 'reset_adjustments_for_paths',
   SaveMetadataAndUpdateThumbnail = 'save_metadata_and_update_thumbnail',
   SaveCollage = 'save_collage',
@@ -92,6 +97,7 @@ export enum Invokes {
   SaveHdr = 'save_hdr',
   SavePresets = 'save_presets',
   SaveSettings = 'save_settings',
+  SetCardBrowseRoot = 'set_card_browse_root',
   SetColorLabelForPaths = 'set_color_label_for_paths',
   SetRatingForPaths = 'set_rating_for_paths',
   SetFlagForPaths = 'set_flag_for_paths',
@@ -144,6 +150,11 @@ export enum RawStatus {
   All = 'all',
   NonRawOnly = 'nonRawOnly',
   RawOnly = 'rawOnly',
+}
+
+export enum FolderMark {
+  Raw = 'raw',
+  Exported = 'exported',
 }
 
 export enum SortDirection {
@@ -248,6 +259,7 @@ export interface AppSettings {
   enableToolFocusMode?: boolean;
   openTreeSections?: string[];
   folderIcons?: Record<string, string>;
+  folderMarks?: Record<string, FolderMark>;
   exifOverlay?: ExifOverlay;
   language?: string;
   fontFamily?: string;

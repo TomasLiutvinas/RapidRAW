@@ -241,10 +241,14 @@ export const useAppInitialization = ({
         if (!isAndroid && rootFolders.length > 0) {
           const currentPath = settings.lastFolderState?.currentFolderPath || rootFolders[0];
           const isAlbum = currentPath.startsWith('Album: ');
+          const restoredLibraryViewMode = settings.libraryViewMode ?? defaultLibraryViewMode;
           const command =
-            settings.libraryViewMode === LibraryViewMode.Recursive
+            restoredLibraryViewMode === LibraryViewMode.Recursive
               ? Invokes.ListImagesRecursive
               : Invokes.ListImagesInDir;
+          const imagesPromise = isAlbum
+            ? undefined
+            : invoke(command, { path: currentPath });
 
           preloadedDataRef.current = {
             rootPaths: rootFolders,
@@ -254,7 +258,7 @@ export const useAppInitialization = ({
               expandedFolders: settings.lastFolderState?.expandedFolders ?? rootFolders,
               showImageCounts: settings.enableFolderImageCounts || settings.folderTreeSort?.key === 'imageCount',
             }),
-            images: isAlbum ? undefined : invoke(command, { path: currentPath }),
+            images: imagesPromise,
           };
         }
 

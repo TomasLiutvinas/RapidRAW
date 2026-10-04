@@ -19,6 +19,8 @@
 
 # RapidRAW
 
+> Fork maintainers: read [docs/FORK.md](docs/FORK.md) before syncing or replaying upstream changes.
+
 > A beautiful, non-destructive, and GPU-accelerated RAW image editor built with performance in mind.
 
 RapidRAW is a modern, high-performance alternative to Adobe Lightroom®. It delivers a simple, beautiful editing experience in a lightweight package (under 20MB) for Windows, macOS, Linux, and Android.

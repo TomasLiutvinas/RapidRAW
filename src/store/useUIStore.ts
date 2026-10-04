@@ -239,6 +239,10 @@ export interface UIState {
   isCreateFolderModalOpen: boolean;
   isRenameFolderModalOpen: boolean;
   isRenameFileModalOpen: boolean;
+  isFuzzySearchModalOpen: boolean;
+  isQuickCommentModalOpen: boolean;
+  isKeybindMapOpen: boolean;
+  isCommentOverlayVisible: boolean;
   renameTargetPaths: Array<string>;
   isImportModalOpen: boolean;
   isCopyPasteSettingsModalOpen: boolean;
@@ -321,6 +325,10 @@ export const useUIStore = create<UIState>((set, get) => ({
   isCreateFolderModalOpen: false,
   isRenameFolderModalOpen: false,
   isRenameFileModalOpen: false,
+  isFuzzySearchModalOpen: false,
+  isQuickCommentModalOpen: false,
+  isKeybindMapOpen: false,
+  isCommentOverlayVisible: false,
   renameTargetPaths: [],
   isImportModalOpen: false,
   isCopyPasteSettingsModalOpen: false,

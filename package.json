@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:local": "tauri build --no-bundle",
     "tauri": "tauri",
     "start": "tauri dev",
     "start:tethering": "tauri dev -- --features tethering",

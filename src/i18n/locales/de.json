@@ -40,7 +40,10 @@
         "global": "Global",
         "highlights": "Lichter",
         "midtones": "Mitteltöne",
-        "shadows": "Tiefen"
+        "paletteMode": "Palettenmodus",
+        "presetAria": "Farbvorgabe {{name}} auswählen",
+        "shadows": "Tiefen",
+        "wheelMode": "Kreismodus"
       },
       "hue": "Farbton",
       "localHue": "Lokaler Farbton",
@@ -76,6 +79,15 @@
       "copyParametric": "Parametrische {{channel}}-Kurve kopieren",
       "copyPoint": "Punktkurve ({{channel}}) kopieren",
       "curveDataUnavailable": "Kurvendaten nicht verfügbar.",
+      "copyLevels": "Copy {{channel}} Levels",
+      "gamma": "Gamma",
+      "inputBlack": "Input Black",
+      "inputLevels": "Input Levels",
+      "inputWhite": "Input White",
+      "levels": "Levels",
+      "outputBlack": "Output Black",
+      "outputLevels": "Output Levels",
+      "outputWhite": "Output White",
       "parametricCurve": "Parametrische Kurve",
       "params": {
         "blackLevel": "Schwarzpunkt",
@@ -86,24 +98,31 @@
         "whiteLevel": "Weißpunkt"
       },
       "pasteFromParametric": "Aus parametrischer Kurve einfügen",
+      "pasteLevels": "Paste Levels",
       "pasteParametric": "Parametrische Kurve einfügen",
       "pastePoint": "Punktkurve einfügen",
       "pointCurve": "Punktkurve",
+      "resetAllLevels": "Reset All Levels",
       "resetAllParametric": "Alle parametrischen Kurven zurücksetzen",
       "resetAllPoint": "Alle Punktkurven zurücksetzen",
+      "resetLevels": "Reset {{channel}} Levels",
       "resetParametric": "Parametrische {{channel}}-Kurve zurücksetzen",
       "resetPoint": "Punktkurve ({{channel}}) zurücksetzen"
     },
     "details": {
+      "amount": "Amount",
       "blueYellow": "Blau/Gelb",
       "centre": "Zentriert",
       "chromaticAberration": "Chromatische Aberration",
       "clarity": "Klarheit",
       "color": "Farbe",
       "dehaze": "Dunst entfernen",
+      "detail": "Detail",
       "luminance": "Luminanz",
+      "masking": "Masking",
       "noiseReduction": "Rauschreduzierung",
       "presence": "Präsenz",
+      "radius": "Radius",
       "redCyan": "Rot/Cyan",
       "sharpening": "Schärfen",
       "sharpness": "Schärfe",
@@ -165,7 +184,9 @@
       "newGroup": "Neue Gruppe",
       "renameAlbum": "Album umbenennen",
       "renameGroup": "Gruppe umbenennen",
-      "rootDir": "Stammverzeichnis"
+      "rootDir": "Stammverzeichnis",
+      "clearTargetAlbum": "Clear Target Album",
+      "setTargetAlbum": "Set as Target Album"
     },
     "colors": {
       "blue": "Blau",
@@ -214,6 +235,12 @@
       "copyHere_other": "{{count}} Bilder hierher kopieren",
       "deleteFolder": "Ordner löschen",
       "importImages": "Bilder importieren",
+      "folderMark": "Folder Mark",
+      "marks": {
+        "default": "Default (no mark)",
+        "exported": "Exported (no filtering)",
+        "raw": "RAW source (RAW only)"
+      },
       "moveHere_one": "Bild hierher verschieben",
       "moveHere_other": "{{count}} Bilder hierher verschieben",
       "newFolder": "Neuer Ordner",
@@ -787,6 +814,11 @@
         "undo": "Rückgängig (Strg+Z) oder Verlauf (Rechtsklick)"
       },
       "vc": "VK"
+    },
+    "comments": {
+      "editTooltip": "Edit comment",
+      "empty": "No comment yet",
+      "toggleTooltip": "Show/hide photo comment"
     }
   },
   "export": {
@@ -1016,7 +1048,12 @@
         "navBack": "Zurück",
         "navForward": "Vorwärts",
         "sortFolders": "Ordner sortieren"
-      }
+      },
+      "marks": {
+        "exportedShort": "EXP",
+        "rawShort": "RAW"
+      },
+      "targetAlbum": "Target album"
     },
     "grid": {
       "columns": {
@@ -1513,6 +1550,27 @@
       "yAxis": "Y-Achse",
       "zoomInTooltip": "Vergrößern",
       "zoomOutTooltip": "Verkleinern"
+    },
+    "fuzzySearch": {
+      "close": "Close quick search",
+      "current": "Current",
+      "hint": "↑↓ select · Enter open · Esc close",
+      "noResults": "No pictures found",
+      "placeholder": "Search pictures by title...",
+      "resultCount": "Showing {{total}}",
+      "searchLabel": "Search pictures"
+    },
+    "quickComment": {
+      "cancel": "Cancel",
+      "close": "Close comment editor",
+      "hint": "Ctrl/⌘ + Enter to save",
+      "placeholder": "Write a short comment for this photo...",
+      "save": "Save",
+      "title": "Photo Comment"
+    },
+    "keybindMap": {
+      "close": "Close shortcut map",
+      "title": "Keyboard Shortcuts"
     }
   },
   "settings": {
@@ -1685,7 +1743,11 @@
         "zoom_in": "Vergrößern",
         "zoom_in_step": "Vergrößern (schrittweise)",
         "zoom_out": "Verkleinern",
-        "zoom_out_step": "Verkleinern (schrittweise)"
+        "zoom_out_step": "Verkleinern (schrittweise)",
+        "toggle_target_album": "Toggle target album membership",
+        "edit_photo_comment": "Edit photo comment",
+        "toggle_comment_overlay": "Show/hide photo comment",
+        "toggle_keybind_map": "Show shortcut map"
       },
       "sections": {
         "editing": "Bearbeitung",

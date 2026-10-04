@@ -125,8 +125,10 @@ incremental = true
 opt-level = 3
 
 [profile.release]
-codegen-units = 1
-lto = true
+# Favor repeat local builds while retaining release-level optimization.
+codegen-units = 16
+lto = "off"
+incremental = true
 strip = true
 
 [lints.rust]

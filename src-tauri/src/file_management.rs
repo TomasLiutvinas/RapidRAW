@@ -8,8 +8,8 @@ use std::hash::{Hash, Hasher};
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::Arc;
 use std::sync::atomic::Ordering;
+use std::sync::{Arc, LazyLock, RwLock};
 use std::thread;
 
 use anyhow::Result;
@@ -40,6 +40,34 @@ use crate::image_processing::{
     apply_crop, apply_flip, apply_geometry_warp, apply_rotation, auto_results_to_json,
     get_all_adjustments_from_json, perform_auto_analysis,
 };
+
+static CARD_BROWSE_ROOT: LazyLock<RwLock<Option<PathBuf>>> = LazyLock::new(|| RwLock::new(None));
+
+pub fn is_card_read_only_path(path: &Path) -> bool {
+    CARD_BROWSE_ROOT
+        .read()
+        .ok()
+        .and_then(|root| root.as_ref().map(|root| path.starts_with(root)))
+        .unwrap_or(false)
+}
+
+pub fn ensure_card_writable(path: &Path) -> Result<(), String> {
+    if is_card_read_only_path(path) {
+        Err("Card mode is read-only. Import the photo before modifying it.".to_string())
+    } else {
+        Ok(())
+    }
+}
+
+#[tauri::command]
+pub fn set_card_browse_root(path: Option<String>) -> Result<(), String> {
+    let root = path.map(PathBuf::from);
+    let mut guard = CARD_BROWSE_ROOT
+        .write()
+        .map_err(|_| "Failed to update Card mode".to_string())?;
+    *guard = root;
+    Ok(())
+}
 use crate::mask_generation::MaskDefinition;
 use crate::preset_converter;
 use crate::tagging::COLOR_TAG_PREFIX;
@@ -97,7 +125,8 @@ fn resolve_image_metadata(
 ) -> ImageFileMetadata {
     let mut metadata = crate::exif_processing::load_sidecar(sidecar_path);
 
-    if enable_xmp_sync
+    if !is_card_read_only_path(image_path)
+        && enable_xmp_sync
         && sync_metadata_from_xmp(image_path, &mut metadata)
         && let Ok(json) = serde_json::to_string_pretty(&metadata)
     {
@@ -474,6 +503,9 @@ pub async fn update_exif_fields(
     paths: Vec<String>,
     updates: HashMap<String, String>,
 ) -> Result<(), String> {
+    for path in &paths {
+        ensure_card_writable(&parse_virtual_path(path).0)?;
+    }
     tauri::async_runtime::spawn_blocking(move || {
         paths.par_iter().for_each(|path| {
             let original_path = Path::new(&path);
@@ -2199,6 +2231,7 @@ pub fn get_supported_file_types() -> Result<serde_json::Value, String> {
 #[tauri::command]
 pub fn create_folder(path: String) -> Result<(), String> {
     let path_obj = Path::new(&path);
+    ensure_card_writable(path_obj)?;
     if let (Some(parent), Some(new_folder_name_os)) = (path_obj.parent(), path_obj.file_name())
         && let Some(new_folder_name) = new_folder_name_os.to_str()
         && parent.exists()
@@ -2218,6 +2251,7 @@ pub fn create_folder(path: String) -> Result<(), String> {
 #[tauri::command]
 pub fn rename_folder(path: String, new_name: String, app_handle: AppHandle) -> Result<(), String> {
     let p = Path::new(&path);
+    ensure_card_writable(p)?;
     if !p.is_dir() {
         return Err("Path is not a directory.".to_string());
     }
@@ -2244,6 +2278,7 @@ pub fn rename_folder(path: String, new_name: String, app_handle: AppHandle) -> R
 
 #[tauri::command]
 pub fn delete_folder(path: String, app_handle: AppHandle) -> Result<(), String> {
+    ensure_card_writable(Path::new(&path))?;
     #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
     {
         if let Err(trash_error) = trash::delete(&path) {
@@ -2274,6 +2309,7 @@ pub fn duplicate_file(
     app_handle: AppHandle,
 ) -> Result<String, String> {
     let (source_path, source_sidecar_path) = parse_virtual_path(&path);
+    ensure_card_writable(&source_path)?;
     if !source_path.is_file() {
         return Err("Source path is not a file.".to_string());
     }
@@ -2384,6 +2420,7 @@ fn find_all_associated_files(source_image_path: &Path) -> Result<Vec<PathBuf>, S
 #[tauri::command]
 pub fn copy_files(source_paths: Vec<String>, destination_folder: String) -> Result<(), String> {
     let dest_path = Path::new(&destination_folder);
+    ensure_card_writable(dest_path)?;
     if !dest_path.is_dir() {
         return Err(format!(
             "Destination is not a folder: {}",
@@ -2468,6 +2505,10 @@ pub fn move_files(
     app_handle: AppHandle,
 ) -> Result<(), String> {
     let dest_path = Path::new(&destination_folder);
+    ensure_card_writable(dest_path)?;
+    for path in &source_paths {
+        ensure_card_writable(&parse_virtual_path(path).0)?;
+    }
     if !dest_path.is_dir() {
         return Err(format!(
             "Destination is not a folder: {}",
@@ -2544,6 +2585,7 @@ pub fn save_metadata_and_update_thumbnail(
     state: tauri::State<AppState>,
 ) -> Result<(), String> {
     let (source_path, sidecar_path) = parse_virtual_path(&path);
+    ensure_card_writable(&source_path)?;
 
     let mut metadata = crate::exif_processing::load_sidecar_with_exif(&sidecar_path, &source_path);
 
@@ -2638,6 +2680,9 @@ pub async fn apply_adjustments_to_paths(
     adjustments: Value,
     app_handle: AppHandle,
 ) -> Result<(), String> {
+    for path in &paths {
+        ensure_card_writable(&parse_virtual_path(path).0)?;
+    }
     let state = app_handle.state::<AppState>();
     add_to_thumbnail_queue(&state, paths.len(), &app_handle);
 
@@ -2741,6 +2786,9 @@ pub async fn reset_adjustments_for_paths(
     paths: Vec<String>,
     app_handle: AppHandle,
 ) -> Result<(), String> {
+    for path in &paths {
+        ensure_card_writable(&parse_virtual_path(path).0)?;
+    }
     let state = app_handle.state::<AppState>();
     add_to_thumbnail_queue(&state, paths.len(), &app_handle);
 
@@ -2903,6 +2951,9 @@ pub async fn apply_auto_adjustments_to_paths(
     paths: Vec<String>,
     app_handle: AppHandle,
 ) -> Result<(), String> {
+    for path in &paths {
+        ensure_card_writable(&parse_virtual_path(path).0)?;
+    }
     let state = app_handle.state::<AppState>();
     add_to_thumbnail_queue(&state, paths.len(), &app_handle);
 
@@ -3015,11 +3066,19 @@ pub async fn apply_auto_adjustments_to_paths(
     Ok(())
 }
 
+fn ensure_metadata_paths_writable(paths: &[String]) -> Result<(), String> {
+    for path in paths {
+        ensure_card_writable(&parse_virtual_path(path).0)?;
+    }
+    Ok(())
+}
+
 fn update_metadata_for_paths(
     paths: &[String],
     app_handle: &AppHandle,
     update: impl Fn(&mut ImageMetadata) + Sync,
-) {
+) -> Result<(), String> {
+    ensure_metadata_paths_writable(paths)?;
     let settings = load_settings(app_handle.clone()).unwrap_or_default();
     let enable_xmp_sync = settings.enable_xmp_sync.unwrap_or(false);
     let create_xmp_if_missing = settings.create_xmp_if_missing.unwrap_or(false);
@@ -3039,6 +3098,8 @@ fn update_metadata_for_paths(
             sync_metadata_to_xmp(&source_path, &metadata, create_xmp_if_missing);
         }
     });
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -3060,7 +3121,7 @@ pub fn set_color_label_for_paths(
         if !tags.is_empty() {
             metadata.tags = Some(tags);
         }
-    });
+    })?;
 
     Ok(())
 }
@@ -3076,7 +3137,7 @@ pub fn set_rating_for_paths(
         if rating > 0 && metadata.flag == Some(ImageFlag::Reject) {
             metadata.flag = None;
         }
-    });
+    })?;
 
     Ok(())
 }
@@ -3089,7 +3150,7 @@ pub fn set_flag_for_paths(
 ) -> Result<(), String> {
     update_metadata_for_paths(&paths, &app_handle, |metadata| {
         metadata.flag = flag;
-    });
+    })?;
 
     Ok(())
 }
@@ -3102,7 +3163,8 @@ pub fn load_metadata(path: String, app_handle: AppHandle) -> Result<ImageMetadat
     let (source_path, sidecar_path) = parse_virtual_path(&path);
     let mut metadata = crate::exif_processing::load_sidecar(&sidecar_path);
 
-    if enable_xmp_sync
+    if !is_card_read_only_path(&source_path)
+        && enable_xmp_sync
         && sync_metadata_from_xmp(&source_path, &mut metadata)
         && let Ok(json) = serde_json::to_string_pretty(&metadata)
     {
@@ -3391,6 +3453,7 @@ pub fn save_community_preset(
 
 #[tauri::command]
 pub fn clear_all_sidecars(root_path: String) -> Result<usize, String> {
+    ensure_card_writable(Path::new(&root_path))?;
     if !Path::new(&root_path).exists() {
         return Err(format!("Root path does not exist: {}", root_path));
     }
@@ -3404,6 +3467,7 @@ pub fn clear_all_sidecars(root_path: String) -> Result<usize, String> {
             && let Some(extension) = path.extension()
             && (extension == "rrdata" || extension == "rrexif")
         {
+            ensure_card_writable(path)?;
             if fs::remove_file(path).is_ok() {
                 deleted_count += 1;
             } else {
@@ -3483,6 +3547,9 @@ pub fn show_in_finder(path: String) -> Result<(), String> {
 
 #[tauri::command]
 pub fn delete_files_from_disk(paths: Vec<String>, app_handle: AppHandle) -> Result<(), String> {
+    for path in &paths {
+        ensure_card_writable(&parse_virtual_path(path).0)?;
+    }
     let mut files_to_trash = HashSet::new();
     let mut deletions = HashSet::new();
 
@@ -3587,6 +3654,9 @@ pub fn delete_files_with_associated(
     paths: Vec<String>,
     app_handle: AppHandle,
 ) -> Result<(), String> {
+    for path in &paths {
+        ensure_card_writable(&parse_virtual_path(path).0)?;
+    }
     if paths.is_empty() {
         return Ok(());
     }
@@ -3970,6 +4040,9 @@ pub fn rename_files(
     name_template: String,
     app_handle: AppHandle,
 ) -> Result<Vec<String>, String> {
+    for path in &paths {
+        ensure_card_writable(&parse_virtual_path(path).0)?;
+    }
     if paths.is_empty() {
         return Ok(Vec::new());
     }
@@ -4084,6 +4157,207 @@ pub fn rename_files(
     Ok(final_new_paths)
 }
 
+#[derive(Serialize)]
+pub struct ReorderFilesByNameResult {
+    pub renames: HashMap<String, String>,
+    pub ordered_paths: Vec<String>,
+}
+
+fn strip_rapidraw_order_prefix(file_name: &str) -> String {
+    let re = regex!(r"^RR_\d{8}__(.+)$");
+    re.captures(file_name)
+        .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()))
+        .unwrap_or_else(|| file_name.to_string())
+}
+
+fn add_existing_sidecar_operation(
+    operations: &mut Vec<(PathBuf, PathBuf)>,
+    old_path: PathBuf,
+    new_path: PathBuf,
+) {
+    if old_path.exists() && old_path != new_path {
+        operations.push((old_path, new_path));
+    }
+}
+
+#[tauri::command]
+pub fn reorder_files_by_name(
+    ordered_paths: Vec<String>,
+    app_handle: AppHandle,
+) -> Result<ReorderFilesByNameResult, String> {
+    for path in &ordered_paths {
+        ensure_card_writable(&parse_virtual_path(path).0)?;
+    }
+    if ordered_paths.is_empty() {
+        return Ok(ReorderFilesByNameResult {
+            renames: HashMap::new(),
+            ordered_paths: Vec::new(),
+        });
+    }
+
+    let mut image_operations: Vec<(PathBuf, PathBuf)> = Vec::new();
+    let mut target_order = Vec::with_capacity(ordered_paths.len());
+    let mut seen_sources = HashSet::new();
+    let mut shared_parent: Option<PathBuf> = None;
+
+    for (index, path_str) in ordered_paths.iter().enumerate() {
+        if path_str.contains("?vc=") {
+            return Err(
+                "Filename order mode cannot rename virtual copies. Select the base file instead."
+                    .to_string(),
+            );
+        }
+
+        let original_path = PathBuf::from(path_str);
+        if !original_path.exists() {
+            return Err(format!("File not found: {}", path_str));
+        }
+        if !is_supported_image_file(&original_path) {
+            return Err(format!("Not a supported image file: {}", path_str));
+        }
+        if !seen_sources.insert(original_path.clone()) {
+            return Err(format!("Duplicate path in reorder request: {}", path_str));
+        }
+
+        let parent = original_path
+            .parent()
+            .ok_or("Could not get parent directory")?
+            .to_path_buf();
+        if let Some(existing_parent) = &shared_parent {
+            if existing_parent != &parent {
+                return Err(
+                    "Filename order mode only supports files from one folder at a time."
+                        .to_string(),
+                );
+            }
+        } else {
+            shared_parent = Some(parent.clone());
+        }
+
+        let original_file_name = original_path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .ok_or("Could not read filename")?;
+        let clean_file_name = strip_rapidraw_order_prefix(original_file_name);
+        let target_file_name = format!("RR_{:08}__{}", (index + 1) * 1000, clean_file_name);
+        let target_path = parent.join(target_file_name);
+
+        target_order.push(target_path.to_string_lossy().into_owned());
+        if original_path != target_path {
+            image_operations.push((original_path, target_path));
+        }
+    }
+
+    let mut operations = image_operations.clone();
+    for (original_path, new_path) in &image_operations {
+        let parent = original_path
+            .parent()
+            .ok_or("Could not get parent directory")?;
+        let original_filename = original_path.file_name().unwrap().to_string_lossy();
+        let new_filename = new_path.file_name().unwrap().to_string_lossy();
+
+        if let Ok(entries) = fs::read_dir(parent) {
+            for entry in entries.filter_map(Result::ok) {
+                let entry_path = entry.path();
+                let entry_filename = entry.file_name().to_string_lossy().to_string();
+                if entry_filename.starts_with(&format!("{}.", original_filename))
+                    && entry_filename.ends_with(".rrdata")
+                {
+                    let new_sidecar_filename =
+                        entry_filename.replacen(&*original_filename, &new_filename, 1);
+                    operations.push((entry_path, parent.join(new_sidecar_filename)));
+                } else if entry_filename == format!("{}.rrdata", original_filename) {
+                    let mut new_sidecar_name = new_path.file_name().unwrap().to_os_string();
+                    new_sidecar_name.push(".rrdata");
+                    operations.push((entry_path, new_path.with_file_name(new_sidecar_name)));
+                }
+            }
+        }
+
+        let mut old_rrexif_name = original_path.file_name().unwrap().to_os_string();
+        old_rrexif_name.push(".rrexif");
+        let mut new_rrexif_name = new_path.file_name().unwrap().to_os_string();
+        new_rrexif_name.push(".rrexif");
+        add_existing_sidecar_operation(
+            &mut operations,
+            original_path.with_file_name(old_rrexif_name),
+            new_path.with_file_name(new_rrexif_name),
+        );
+
+        if let (Some(old_stem), Some(new_stem)) = (original_path.file_stem(), new_path.file_stem())
+        {
+            add_existing_sidecar_operation(
+                &mut operations,
+                original_path.with_file_name(format!("{}.xmp", old_stem.to_string_lossy())),
+                new_path.with_file_name(format!("{}.xmp", new_stem.to_string_lossy())),
+            );
+            add_existing_sidecar_operation(
+                &mut operations,
+                original_path.with_file_name(format!("{}.XMP", old_stem.to_string_lossy())),
+                new_path.with_file_name(format!("{}.XMP", new_stem.to_string_lossy())),
+            );
+        }
+    }
+
+    let source_set: HashSet<PathBuf> = operations.iter().map(|(old, _)| old.clone()).collect();
+    let mut target_set = HashSet::new();
+    for (_, new_path) in &operations {
+        if !target_set.insert(new_path.clone()) {
+            return Err(format!("Duplicate target filename: {}", new_path.display()));
+        }
+        if new_path.exists() && !source_set.contains(new_path) {
+            return Err(format!(
+                "A file with the name {} already exists.",
+                new_path.display()
+            ));
+        }
+    }
+
+    let uuid = Uuid::new_v4();
+    let mut temp_operations: Vec<(PathBuf, PathBuf, PathBuf)> =
+        Vec::with_capacity(operations.len());
+    for (index, (old_path, new_path)) in operations.iter().enumerate() {
+        let temp_path =
+            old_path.with_file_name(format!(".rapidraw-reorder-{}-{}.tmp", uuid, index));
+        fs::rename(old_path, &temp_path)
+            .map_err(|e| format!("Failed to prepare rename {}: {}", old_path.display(), e))?;
+        temp_operations.push((temp_path, old_path.clone(), new_path.clone()));
+    }
+
+    for (temp_path, old_path, new_path) in &temp_operations {
+        fs::rename(temp_path, new_path).map_err(|e| {
+            for (rollback_temp, rollback_old, _) in &temp_operations {
+                if rollback_temp.exists() {
+                    let _ = fs::rename(rollback_temp, rollback_old);
+                }
+            }
+            format!(
+                "Failed to rename {} to {}: {}",
+                old_path.display(),
+                new_path.display(),
+                e
+            )
+        })?;
+    }
+
+    let renames: HashMap<String, String> = image_operations
+        .into_iter()
+        .map(|(old_path, new_path)| {
+            (
+                old_path.to_string_lossy().into_owned(),
+                new_path.to_string_lossy().into_owned(),
+            )
+        })
+        .collect();
+
+    sync_album_path_changes(&app_handle, Some(&renames), None, None);
+
+    Ok(ReorderFilesByNameResult {
+        renames,
+        ordered_paths: target_order,
+    })
+}
+
 #[tauri::command]
 pub fn create_virtual_copy(
     source_virtual_path: String,
@@ -4091,6 +4365,7 @@ pub fn create_virtual_copy(
     app_handle: AppHandle,
 ) -> Result<String, String> {
     let (source_path, source_sidecar_path) = parse_virtual_path(&source_virtual_path);
+    ensure_card_writable(&source_path)?;
 
     let new_copy_id = Uuid::new_v4().to_string()[..6].to_string();
     let new_virtual_path = format!("{}?vc={}", source_path.to_string_lossy(), new_copy_id);
@@ -4347,5 +4622,56 @@ pub fn sync_metadata_to_xmp(source_path: &Path, metadata: &ImageMetadata, create
         }
 
         let _ = fs::write(&xmp_file, content);
+    }
+}
+
+#[cfg(test)]
+mod fork_integration_tests {
+    use super::*;
+
+    #[test]
+    fn card_mode_blocks_metadata_and_cleanup_but_allows_copy_out() {
+        let fixture = tempfile::tempdir().unwrap();
+        let card = fixture.path().join("card");
+        let destination = fixture.path().join("imported");
+        fs::create_dir_all(&card).unwrap();
+        fs::create_dir_all(&destination).unwrap();
+        let photo = card.join("photo.jpg");
+        let sidecar = card.join("photo.jpg.rrdata");
+        fs::write(&photo, b"fixture photo").unwrap();
+        fs::write(&sidecar, b"original metadata").unwrap();
+        set_card_browse_root(Some(card.to_string_lossy().into_owned())).unwrap();
+
+        assert!(ensure_metadata_paths_writable(&[photo.to_string_lossy().into_owned()]).is_err());
+        assert!(clear_all_sidecars(card.to_string_lossy().into_owned()).is_err());
+        assert!(clear_all_sidecars(fixture.path().to_string_lossy().into_owned()).is_err());
+        assert_eq!(fs::read(&sidecar).unwrap(), b"original metadata");
+        copy_files(
+            vec![photo.to_string_lossy().into_owned()],
+            destination.to_string_lossy().into_owned(),
+        )
+        .unwrap();
+        assert_eq!(
+            fs::read(destination.join("photo.jpg")).unwrap(),
+            b"fixture photo"
+        );
+        assert!(
+            copy_files(
+                vec![destination.join("photo.jpg").to_string_lossy().into_owned()],
+                card.to_string_lossy().into_owned()
+            )
+            .is_err()
+        );
+
+        set_card_browse_root(None).unwrap();
+        assert!(ensure_metadata_paths_writable(&[photo.to_string_lossy().into_owned()]).is_ok());
+    }
+
+    #[test]
+    fn unrated_filter_survives_settings_serialization() {
+        let filter: FilterCriteria =
+            serde_json::from_value(serde_json::json!({"rating": -1, "rawStatus": "all"})).unwrap();
+        let saved = serde_json::to_value(&filter).unwrap();
+        assert_eq!(saved["rating"], -1);
     }
 }
