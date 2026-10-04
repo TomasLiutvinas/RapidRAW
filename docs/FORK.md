@@ -71,11 +71,20 @@ The launcher executes:
 Rebuild that binary with:
 
 ```bash
-npm run tauri build -- --no-bundle
+npm run build:local
 ```
 
 Do not replace this with `cargo build --release`: plain Cargo does not apply Tauri's production
 configuration and produces a binary that tries to load `http://localhost:1420`.
+
+The release profile favors local rebuild speed: full release optimization (`opt-level = 3`),
+16 code-generation units, incremental compilation, and no link-time optimization. Compared with
+the upstream single-unit, whole-program LTO profile, this trades some potential runtime optimization
+for faster compilation. Incremental caches consume additional space under `src-tauri/target`;
+keep that directory between builds. Changing profiles triggers a one-time dependency rebuild.
+
+`build:local` skips installers and keeps the binary at the launcher's existing path. The equivalent
+command is `npm run tauri build -- --no-bundle`.
 
 The fork's configured package targets are `deb` and `rpm`; AppImage packaging is intentionally
 disabled because `linuxdeploy` is not part of this workflow.
@@ -115,7 +124,7 @@ output and verify that changed files introduce no new errors; do not label all f
 Build the launcher binary after checks pass:
 
 ```bash
-npm run tauri build -- --no-bundle
+npm run build:local
 ```
 
 ### Manual smoke tests
