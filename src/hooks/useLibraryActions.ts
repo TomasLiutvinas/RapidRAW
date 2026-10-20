@@ -4,7 +4,15 @@ import { toast } from 'react-toastify';
 import { useLibraryStore } from '../store/useLibraryStore';
 import { useEditorStore } from '../store/useEditorStore';
 import { useUIStore } from '../store/useUIStore';
-import { Invokes, ImageFile, ImageFlag, AlbumItem, Album, AlbumGroup } from '../components/ui/AppProperties';
+import {
+  Invokes,
+  ImageFile,
+  ImageFlag,
+  LibraryViewMode,
+  AlbumItem,
+  Album,
+  AlbumGroup,
+} from '../components/ui/AppProperties';
 import { globalImageCache } from '../utils/ImageLRUCache';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { computeSortedLibrary } from './useSortedLibrary';
@@ -31,6 +39,67 @@ const withFlag = (imageList: ImageFile[], paths: string[], flag: ImageFlag | nul
   );
 };
 
+export const clearLibrarySelection = () => {
+  useLibraryStore.getState().setLibrary({
+    multiSelectedPaths: [],
+    libraryActivePath: null,
+    selectionAnchorPath: null,
+  });
+
+  useEditorStore.getState().setEditor({
+    selectedImage: null,
+    finalPreviewUrl: null,
+    uncroppedAdjustedPreviewUrl: null,
+    histogram: null,
+    waveform: null,
+    activeMaskId: null,
+    activeMaskContainerId: null,
+    activeAiPatchContainerId: null,
+    activeAiSubMaskId: null,
+    isWbPickerActive: false,
+    isRelightPickerActive: false,
+    activeRelightLightId: null,
+    activeCenterMarker: null,
+  });
+};
+
+const applyWithAutoAdvance = (changedPaths: string[], applyChange: () => void) => {
+  const { activeView, cullingModalState } = useUIStore.getState();
+  const activePath =
+    activeView === 'editor'
+      ? (useEditorStore.getState().selectedImage?.path ?? null)
+      : useLibraryStore.getState().libraryActivePath;
+
+  if (!activePath || !changedPaths.includes(activePath) || cullingModalState.isOpen) {
+    applyChange();
+    return;
+  }
+
+  const before = computeSortedLibrary(useLibraryStore.getState(), useSettingsStore.getState());
+  applyChange();
+  const after = computeSortedLibrary(useLibraryStore.getState(), useSettingsStore.getState());
+
+  const visible = new Set(after.map((img) => img.path));
+  const activeIndex = before.findIndex((img) => img.path === activePath);
+  if (activeIndex === -1 || visible.has(activePath)) return;
+
+  const next =
+    before.slice(activeIndex + 1).find((img) => visible.has(img.path)) ??
+    before
+      .slice(0, activeIndex)
+      .reverse()
+      .find((img) => visible.has(img.path));
+
+  if (next) {
+    useLibraryStore
+      .getState()
+      .setLibrary({ libraryActivePath: next.path, multiSelectedPaths: [next.path], selectionAnchorPath: next.path });
+    useUIStore.getState().imageSelectHandler?.(next.path, activeView === 'editor');
+  } else if (activeView === 'library') {
+    clearLibrarySelection();
+  }
+};
+
 export function useLibraryActions(handleImageSelect?: (path: string, openInEditor?: boolean) => void) {
   const handleRate = useCallback((newRating: number, paths?: string[]) => {
     const { imageRatings, imageList, setLibrary } = useLibraryStore.getState();
@@ -42,16 +111,21 @@ export function useLibraryActions(handleImageSelect?: (path: string, openInEdito
     const currentRating = imageRatings[selectedPaths[0]] || 0;
     const finalRating = newRating === currentRating && !isRejected ? 0 : newRating;
 
-    setLibrary((state) => {
-      const newRatings = { ...state.imageRatings };
-      pathsToRate.forEach((p) => {
-        newRatings[p] = finalRating;
-      });
-      if (finalRating > 0) {
-        return { imageRatings: newRatings, imageList: withFlag(state.imageList, pathsToRate, null, ImageFlag.Reject) };
-      }
-      return { imageRatings: newRatings };
-    });
+    applyWithAutoAdvance(pathsToRate, () =>
+      setLibrary((state) => {
+        const newRatings = { ...state.imageRatings };
+        pathsToRate.forEach((p) => {
+          newRatings[p] = finalRating;
+        });
+        if (finalRating > 0) {
+          return {
+            imageRatings: newRatings,
+            imageList: withFlag(state.imageList, pathsToRate, null, ImageFlag.Reject),
+          };
+        }
+        return { imageRatings: newRatings };
+      }),
+    );
 
     invoke(Invokes.SetRatingForPaths, { paths: pathsToRate, rating: finalRating }).catch((err) => {
       console.error(err);
@@ -63,9 +137,11 @@ export function useLibraryActions(handleImageSelect?: (path: string, openInEdito
     const { expandedPaths } = resolveTargetPaths(paths);
     if (expandedPaths.length === 0) return;
 
-    useLibraryStore.getState().setLibrary((state) => ({
-      imageList: withFlag(state.imageList, expandedPaths, flag),
-    }));
+    applyWithAutoAdvance(expandedPaths, () =>
+      useLibraryStore.getState().setLibrary((state) => ({
+        imageList: withFlag(state.imageList, expandedPaths, flag),
+      })),
+    );
 
     invoke(Invokes.SetFlagForPaths, { paths: expandedPaths, flag }).catch((err) => {
       console.error(err);
@@ -103,16 +179,18 @@ export function useLibraryActions(handleImageSelect?: (path: string, openInEdito
 
     try {
       await invoke(Invokes.SetColorLabelForPaths, { paths: pathsToUpdate, color: finalColor });
-      setLibrary((state) => ({
-        imageList: state.imageList.map((image: ImageFile) => {
-          if (pathsToUpdate.includes(image.path)) {
-            const otherTags = (image.tags || []).filter((tag: string) => !tag.startsWith('color:'));
-            const newTags = finalColor ? [...otherTags, `color:${finalColor}`] : otherTags;
-            return { ...image, tags: newTags };
-          }
-          return image;
-        }),
-      }));
+      applyWithAutoAdvance(pathsToUpdate, () =>
+        setLibrary((state) => ({
+          imageList: state.imageList.map((image: ImageFile) => {
+            if (pathsToUpdate.includes(image.path)) {
+              const otherTags = (image.tags || []).filter((tag: string) => !tag.startsWith('color:'));
+              const newTags = finalColor ? [...otherTags, `color:${finalColor}`] : otherTags;
+              return { ...image, tags: newTags };
+            }
+            return image;
+          }),
+        })),
+      );
     } catch (err) {
       toast.error(`Failed to set color label: ${err}`);
     }
@@ -123,17 +201,19 @@ export function useLibraryActions(handleImageSelect?: (path: string, openInEdito
     const groupingMode = useSettingsStore.getState().appSettings?.grouping ?? 'off';
     const pathsToUpdate = expandGroupedPaths(imageList, changedPaths, groupingMode);
 
-    useLibraryStore.getState().setLibrary((state) => ({
-      imageList: state.imageList.map((image) => {
-        if (pathsToUpdate.includes(image.path)) {
-          const colorTags = (image.tags || []).filter((t) => t.startsWith('color:'));
-          const prefixedNewTags = newTags.map((t) => (t.isUser ? `user:${t.tag}` : t.tag));
-          const finalTags = [...colorTags, ...prefixedNewTags].sort();
-          return { ...image, tags: finalTags.length > 0 ? finalTags : null };
-        }
-        return image;
-      }),
-    }));
+    applyWithAutoAdvance(pathsToUpdate, () =>
+      useLibraryStore.getState().setLibrary((state) => ({
+        imageList: state.imageList.map((image) => {
+          if (pathsToUpdate.includes(image.path)) {
+            const colorTags = (image.tags || []).filter((t) => t.startsWith('color:'));
+            const prefixedNewTags = newTags.map((t) => (t.isUser ? `user:${t.tag}` : t.tag));
+            const finalTags = [...colorTags, ...prefixedNewTags].sort();
+            return { ...image, tags: finalTags.length > 0 ? finalTags : null };
+          }
+          return image;
+        }),
+      })),
+    );
   }, []);
 
   const handleUpdateExif = useCallback(async (paths: Array<string> | undefined, updates: Record<string, string>) => {
@@ -195,24 +275,7 @@ export function useLibraryActions(handleImageSelect?: (path: string, openInEdito
         selectionAnchorPath: selectedImage.path,
       });
     } else {
-      useLibraryStore.getState().setLibrary({
-        multiSelectedPaths: [],
-        libraryActivePath: null,
-        selectionAnchorPath: null,
-      });
-
-      useEditorStore.getState().setEditor({
-        selectedImage: null,
-        finalPreviewUrl: null,
-        uncroppedAdjustedPreviewUrl: null,
-        histogram: null,
-        waveform: null,
-        activeMaskId: null,
-        activeMaskContainerId: null,
-        activeAiPatchContainerId: null,
-        activeAiSubMaskId: null,
-        isWbPickerActive: false,
-      });
+      clearLibrarySelection();
     }
   }, []);
 
@@ -224,6 +287,7 @@ export function useLibraryActions(handleImageSelect?: (path: string, openInEdito
         onSimpleClick(p: string, isAlreadySelected: boolean): void;
         updateLibraryActivePath: boolean;
         shiftAnchor: string | null;
+        visibleImagePaths?: string[];
       },
     ) => {
       const libraryState = useLibraryStore.getState();
@@ -235,14 +299,19 @@ export function useLibraryActions(handleImageSelect?: (path: string, openInEdito
       const isAlreadySelected = multiSelectedPaths.includes(path);
 
       if (shiftKey && shiftAnchor) {
-        const sortedImageList = computeSortedLibrary(libraryState, useSettingsStore.getState());
-        const anchorIndex = sortedImageList.findIndex((f) => f.path === shiftAnchor);
-        const currentIndex = sortedImageList.findIndex((f) => f.path === path);
+        const settings = useSettingsStore.getState();
+        // Recursive ranges follow the rendered folder order and omit collapsed sections.
+        const visibleRangePaths =
+          settings.appSettings?.libraryViewMode === LibraryViewMode.Recursive ? options.visibleImagePaths : undefined;
+        const rangePaths = visibleRangePaths ?? computeSortedLibrary(libraryState, settings).map((image) => image.path);
+        const anchorIndex = rangePaths.indexOf(shiftAnchor);
+        const currentIndex = rangePaths.indexOf(path);
 
-        if (anchorIndex !== -1 && currentIndex !== -1) {
-          const start = Math.min(anchorIndex, currentIndex);
-          const end = Math.max(anchorIndex, currentIndex);
-          const range = sortedImageList.slice(start, end + 1).map((f) => f.path);
+        if (currentIndex !== -1 && (anchorIndex !== -1 || visibleRangePaths !== undefined)) {
+          // A hidden anchor becomes a one-item range, resetting the anchor to this click.
+          const start = anchorIndex === -1 ? currentIndex : Math.min(anchorIndex, currentIndex);
+          const end = anchorIndex === -1 ? currentIndex : Math.max(anchorIndex, currentIndex);
+          const range = rangePaths.slice(start, end + 1);
           const baseSelection = isCtrlPressed ? multiSelectedPaths : [];
           const newSelection = Array.from(new Set([...baseSelection, ...range]));
 
@@ -271,11 +340,12 @@ export function useLibraryActions(handleImageSelect?: (path: string, openInEdito
   );
 
   const handleLibraryImageSingleClick = useCallback(
-    (path: string, event: any) => {
+    (path: string, event: any, visibleImagePaths?: string[]) => {
       const { selectionAnchorPath, libraryActivePath, setLibrary } = useLibraryStore.getState();
       handleMultiSelectClick(path, event, {
         shiftAnchor: selectionAnchorPath ?? libraryActivePath,
         updateLibraryActivePath: true,
+        visibleImagePaths,
         onSimpleClick: (p: string, isAlreadySelected: boolean) => {
           if (isAlreadySelected) {
             setLibrary({ libraryActivePath: p, selectionAnchorPath: p });
@@ -292,7 +362,7 @@ export function useLibraryActions(handleImageSelect?: (path: string, openInEdito
   );
 
   const handleImageClick = useCallback(
-    (path: string, event: any) => {
+    (path: string, event: any, visibleImagePaths?: string[]) => {
       const { selectionAnchorPath, libraryActivePath, setLibrary } = useLibraryStore.getState();
       const { selectedImage } = useEditorStore.getState();
       const inEditor = !!selectedImage;
@@ -300,6 +370,7 @@ export function useLibraryActions(handleImageSelect?: (path: string, openInEdito
       handleMultiSelectClick(path, event, {
         shiftAnchor: selectionAnchorPath ?? (inEditor ? selectedImage.path : libraryActivePath),
         updateLibraryActivePath: !inEditor,
+        visibleImagePaths,
         onSimpleClick: (p: string, isAlreadySelected: boolean) => {
           if (!isAlreadySelected) {
             setLibrary({ multiSelectedPaths: [p] });
@@ -518,6 +589,72 @@ export function useLibraryActions(handleImageSelect?: (path: string, openInEdito
     }
   }, []);
 
+  const handleToggleTargetAlbumMembership = useCallback(async () => {
+    const { targetAlbumId, albumTree, multiSelectedPaths, libraryActivePath, setLibrary } = useLibraryStore.getState();
+    const selectedImage =
+      useUIStore.getState().activeView === 'editor' ? useEditorStore.getState().selectedImage : null;
+    if (!targetAlbumId) {
+      toast.info('Set a target album first. Right-click an album and choose “Set as Target Album”.');
+      return;
+    }
+    const paths = selectedImage
+      ? [selectedImage.path]
+      : multiSelectedPaths.length
+        ? multiSelectedPaths
+        : libraryActivePath
+          ? [libraryActivePath]
+          : [];
+    if (!paths.length) return;
+    const findAlbum = (nodes: AlbumItem[]): Album | undefined => {
+      for (const node of nodes) {
+        if (node.type === 'album' && node.id === targetAlbumId) return node as Album;
+        if (node.type === 'group') {
+          const album = findAlbum((node as AlbumGroup).children);
+          if (album) return album;
+        }
+      }
+    };
+    const tree = structuredClone(albumTree);
+    const album = findAlbum(tree);
+    if (!album) {
+      setLibrary({ targetAlbumId: null });
+      toast.error('Target album no longer exists. Choose a new target album.');
+      return;
+    }
+    const selected = new Set(paths);
+    const removing = paths.every((path) => album.images.includes(path));
+    album.images = removing
+      ? album.images.filter((path) => !selected.has(path))
+      : [...new Set([...album.images, ...paths])];
+    try {
+      await invoke(Invokes.SaveAlbums, { tree });
+      const savedTree = await invoke<AlbumItem[]>(Invokes.GetAlbums);
+      setLibrary((state) => {
+        const feedback = {
+          action: removing ? ('removed' as const) : ('added' as const),
+          albumId: targetAlbumId,
+          token: Date.now(),
+        };
+        if (state.activeAlbumId !== targetAlbumId || !removing)
+          return { albumTree: savedTree, targetAlbumFeedback: feedback };
+        const imageList = state.imageList.filter((image) => !selected.has(image.path));
+        const activePath = imageList.some((image) => image.path === state.libraryActivePath)
+          ? state.libraryActivePath
+          : (imageList[0]?.path ?? null);
+        return {
+          albumTree: savedTree,
+          targetAlbumFeedback: feedback,
+          imageList,
+          libraryActivePath: activePath,
+          selectionAnchorPath: activePath,
+          multiSelectedPaths: state.multiSelectedPaths.filter((path) => !selected.has(path)),
+        };
+      });
+    } catch (err) {
+      toast.error(`Failed to update target album: ${err}`);
+    }
+  }, []);
+
   return {
     handleRate,
     handleSetFlag,
@@ -533,5 +670,6 @@ export function useLibraryActions(handleImageSelect?: (path: string, openInEdito
     handleCreateAlbumItem,
     handleRenameAlbumItem,
     handleRemoveFromAlbum,
+    handleToggleTargetAlbumMembership,
   };
 }

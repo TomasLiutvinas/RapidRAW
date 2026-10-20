@@ -8,11 +8,20 @@ import { useEditorStore } from '../store/useEditorStore';
 import { useUIStore } from '../store/useUIStore';
 import { useProcessStore } from '../store/useProcessStore';
 import { useSettingsStore } from '../store/useSettingsStore';
-import { EditedStatus, FolderMark, Invokes, LibraryViewMode, ImageFile, RawStatus } from '../components/ui/AppProperties';
+import {
+  EditedStatus,
+  FolderMark,
+  Invokes,
+  LibraryViewMode,
+  ImageFile,
+  RawStatus,
+} from '../components/ui/AppProperties';
 import { INITIAL_ADJUSTMENTS, normalizeLoadedAdjustments } from '../utils/adjustments';
 import { globalImageCache } from '../utils/ImageLRUCache';
 import { debouncedSave, debouncedSetHistory } from './useEditorActions';
 import { resolveFolderMark } from '../utils/folderMarks';
+import { clearLibrarySelection } from './useLibraryActions';
+import { computeSortedLibrary } from './useSortedLibrary';
 
 export interface AppNavigationProps {
   clearThumbnailQueue: () => void;
@@ -107,6 +116,12 @@ export function useAppNavigation({ clearThumbnailQueue, refs }: AppNavigationPro
   } = refs;
 
   const handleGoHome = useCallback(() => {
+    // Flush while the card guard is still active, then discard its editor state.
+    debouncedSave.flush();
+    debouncedSetHistory.cancel();
+    useEditorStore
+      .getState()
+      .setEditor({ selectedImage: null, finalPreviewUrl: null, uncroppedAdjustedPreviewUrl: null });
     void invoke(Invokes.SetCardBrowseRoot, { path: null });
     useLibraryStore.getState().setLibrary({
       rootPaths: [],
@@ -120,7 +135,7 @@ export function useAppNavigation({ clearThumbnailQueue, refs }: AppNavigationPro
       libraryActivePath: null,
       expandedFolders: new Set(),
     });
-    useUIStore.getState().setUI({ isLibraryExportPanelVisible: false });
+    useUIStore.getState().setUI({ isLibraryExportPanelVisible: false, activeView: 'library' });
   }, []);
 
   const handleBackToLibrary = useCallback(() => {
@@ -144,8 +159,17 @@ export function useAppNavigation({ clearThumbnailQueue, refs }: AppNavigationPro
     debouncedSetHistory.cancel();
 
     const lastActivePath = selectedImage?.path ?? null;
+    const isStillVisible =
+      lastActivePath !== null &&
+      computeSortedLibrary(useLibraryStore.getState(), useSettingsStore.getState()).some(
+        (img) => img.path === lastActivePath,
+      );
 
-    setLibrary({ libraryActivePath: lastActivePath });
+    if (isStillVisible) {
+      setLibrary({ libraryActivePath: lastActivePath });
+    } else {
+      clearLibrarySelection();
+    }
     setUI({ activeView: 'library', slideDirection: 1 });
   }, [refs]);
 
@@ -204,6 +228,9 @@ export function useAppNavigation({ clearThumbnailQueue, refs }: AppNavigationPro
         activeAiPatchContainerId: null,
         activeAiSubMaskId: null,
         isWbPickerActive: false,
+        isRelightPickerActive: false,
+        activeRelightLightId: null,
+        activeCenterMarker: null,
         previewOverride: null,
       });
 
@@ -258,9 +285,6 @@ export function useAppNavigation({ clearThumbnailQueue, refs }: AppNavigationPro
               freshAdjustments = normalizeLoadedAdjustments(metadata.adjustments);
             } else {
               freshAdjustments = { ...INITIAL_ADJUSTMENTS };
-            }
-            if (freshAdjustments.aspectRatio == null && cached.adjustments.aspectRatio != null) {
-              freshAdjustments.aspectRatio = cached.adjustments.aspectRatio;
             }
             if (!isSliderDragging && JSON.stringify(cached.adjustments) !== JSON.stringify(freshAdjustments)) {
               setEditor({ adjustments: freshAdjustments });
@@ -350,7 +374,7 @@ export function useAppNavigation({ clearThumbnailQueue, refs }: AppNavigationPro
         await invoke('cancel_thumbnail_generation');
         clearThumbnailQueue();
         setLibrary({ isViewLoading: true, activeAlbumId: null, libraryScrollTop: 0 });
-        setProcess({ thumbnails: {} });
+        setProcess({ thumbnails: {}, mediumThumbnails: {} });
         globalImageCache.clear();
         setUI({ activeView: 'library' });
       } else {
@@ -363,7 +387,7 @@ export function useAppNavigation({ clearThumbnailQueue, refs }: AppNavigationPro
 
         if (isNewRoot && path) {
           newExpandedFolders = new Set([path]);
-          if (appSettings) {
+          if (appSettings && !useLibraryStore.getState().cardBrowseRoot) {
             handleSettingsChange({ ...appSettings, lastRootPath: path } as any);
           }
         } else if (path && expandParents) {
@@ -520,12 +544,10 @@ export function useAppNavigation({ clearThumbnailQueue, refs }: AppNavigationPro
 
   const handleOpenFolder = useCallback(async () => {
     const { osPlatform, appSettings, handleSettingsChange } = useSettingsStore.getState();
-    const { rootPaths, folderTrees, setLibrary } = useLibraryStore.getState();
+    const { rootPaths, folderTrees, cardBrowseRoot, setLibrary } = useLibraryStore.getState();
     const isAndroid = osPlatform === 'android';
 
     try {
-      await invoke(Invokes.SetCardBrowseRoot, { path: null });
-      setLibrary({ cardBrowseRoot: null });
       let selectedPath = '';
       if (isAndroid) {
         selectedPath = await invoke<string>(Invokes.GetOrCreateInternalLibraryRoot);
@@ -537,8 +559,25 @@ export function useAppNavigation({ clearThumbnailQueue, refs }: AppNavigationPro
       }
 
       if (selectedPath) {
-        if (!rootPaths.includes(selectedPath)) {
-          const newRootPaths = [...rootPaths, selectedPath];
+        // Cancelling the picker must leave Card mode and its write guard intact.
+        const normalRoots = cardBrowseRoot
+          ? appSettings?.rootFolders?.length
+            ? appSettings.rootFolders
+            : appSettings?.lastRootPath
+              ? [appSettings.lastRootPath]
+              : []
+          : rootPaths;
+        debouncedSave.flush();
+        debouncedSetHistory.cancel();
+        if (cardBrowseRoot) {
+          useEditorStore
+            .getState()
+            .setEditor({ selectedImage: null, finalPreviewUrl: null, uncroppedAdjustedPreviewUrl: null });
+        }
+        await invoke(Invokes.SetCardBrowseRoot, { path: null });
+        setLibrary({ cardBrowseRoot: null, currentFolderPath: selectedPath });
+        if (cardBrowseRoot || !normalRoots.includes(selectedPath)) {
+          const newRootPaths = [...new Set([...normalRoots, selectedPath])];
           setLibrary({ rootPaths: newRootPaths });
 
           if (appSettings) {
@@ -547,13 +586,18 @@ export function useAppNavigation({ clearThumbnailQueue, refs }: AppNavigationPro
 
           setLibrary({ isTreeLoading: true });
           try {
-            const newTree = await invoke(Invokes.GetFolderTree, {
-              path: selectedPath,
+            const treeOptions = {
               expandedFolders: [selectedPath],
               showImageCounts:
                 appSettings?.enableFolderImageCounts || appSettings?.folderTreeSort?.key === 'imageCount',
-            });
-            setLibrary({ folderTrees: [...folderTrees, newTree] });
+            };
+            if (cardBrowseRoot) {
+              const trees = await invoke(Invokes.GetPinnedFolderTrees, { ...treeOptions, paths: newRootPaths });
+              setLibrary({ folderTrees: trees as typeof folderTrees, expandedFolders: new Set([selectedPath]) });
+            } else {
+              const newTree = await invoke(Invokes.GetFolderTree, { ...treeOptions, path: selectedPath });
+              setLibrary({ folderTrees: [...folderTrees, newTree] });
+            }
           } catch (e) {
             toast.error(`Failed to load folder tree: ${e}`);
           } finally {

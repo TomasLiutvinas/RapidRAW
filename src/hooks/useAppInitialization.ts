@@ -105,6 +105,7 @@ export const useAppInitialization = ({
     sortCriteria,
     filterCriteria,
     currentFolderPath,
+    cardBrowseRoot,
     expandedFolders,
     activeAlbumId,
     expandedAlbumGroups,
@@ -116,6 +117,7 @@ export const useAppInitialization = ({
       sortCriteria: state.sortCriteria,
       filterCriteria: state.filterCriteria,
       currentFolderPath: state.currentFolderPath,
+      cardBrowseRoot: state.cardBrowseRoot,
       expandedFolders: state.expandedFolders,
       activeAlbumId: state.activeAlbumId,
       expandedAlbumGroups: state.expandedAlbumGroups,
@@ -246,9 +248,7 @@ export const useAppInitialization = ({
             restoredLibraryViewMode === LibraryViewMode.Recursive
               ? Invokes.ListImagesRecursive
               : Invokes.ListImagesInDir;
-          const imagesPromise = isAlbum
-            ? undefined
-            : invoke(command, { path: currentPath });
+          const imagesPromise = isAlbum ? undefined : invoke(command, { path: currentPath });
 
           preloadedDataRef.current = {
             rootPaths: rootFolders,
@@ -381,6 +381,7 @@ export const useAppInitialization = ({
 
   useEffect(() => {
     if (isInitialMount.current || !appSettings) return;
+    if (cardBrowseRoot) return;
     if (!currentFolderPath && !activeAlbumId) return;
 
     const currentExpanded = Array.from(expandedFolders);
@@ -410,7 +411,15 @@ export const useAppInitialization = ({
         },
       });
     }
-  }, [currentFolderPath, expandedFolders, activeAlbumId, expandedAlbumGroups, appSettings, handleSettingsChange]);
+  }, [
+    currentFolderPath,
+    cardBrowseRoot,
+    expandedFolders,
+    activeAlbumId,
+    expandedAlbumGroups,
+    appSettings,
+    handleSettingsChange,
+  ]);
 
   useEffect(() => {
     if (!appSettings) return;

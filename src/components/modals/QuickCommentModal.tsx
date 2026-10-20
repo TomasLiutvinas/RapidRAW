@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useEditorStore } from '../../store/useEditorStore';
 import { useLibraryStore } from '../../store/useLibraryStore';
 import { useProcessStore } from '../../store/useProcessStore';
+import { useUIStore } from '../../store/useUIStore';
 import { useLibraryActions } from '../../hooks/useLibraryActions';
 import { useSortedLibrary } from '../../hooks/useSortedLibrary';
 import { Invokes } from '../ui/AppProperties';
@@ -18,7 +19,8 @@ interface QuickCommentModalProps {
 export default function QuickCommentModal({ isOpen, onClose, onSelectImage }: QuickCommentModalProps) {
   const { t } = useTranslation();
   const selectedImage = useEditorStore((state) => state.selectedImage);
-  const selectedImagePath = selectedImage?.path || null;
+  const activeView = useUIStore((state) => state.activeView);
+  const selectedImagePath = activeView === 'editor' ? selectedImage?.path || null : null;
   const finalPreviewUrl = useEditorStore((state) => state.finalPreviewUrl);
   const libraryActivePath = useLibraryStore((state) => state.libraryActivePath);
   const setLibrary = useLibraryStore((state) => state.setLibrary);
@@ -39,7 +41,7 @@ export default function QuickCommentModal({ isOpen, onClose, onSelectImage }: Qu
     return {
       path,
       fileName: path.split(/[\\/]/).pop() || path,
-      comment: selectedImage?.exif?.UserComment || libraryImage?.exif?.UserComment || '',
+      comment: (selectedImagePath === path ? selectedImage?.exif?.UserComment : libraryImage?.exif?.UserComment) || '',
     };
   }, [imageList, libraryActivePath, selectedImage, selectedImagePath]);
 
@@ -143,6 +145,13 @@ export default function QuickCommentModal({ isOpen, onClose, onSelectImage }: Qu
       aria-modal="true"
       className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-black p-4 pb-6"
       onClick={handleClose}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          event.stopPropagation();
+          void handleClose();
+        }
+      }}
       role="dialog"
     >
       {displayImageUrl && (
@@ -187,10 +196,6 @@ export default function QuickCommentModal({ isOpen, onClose, onSelectImage }: Qu
               if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'l') {
                 event.preventDefault();
                 navigateBy(1);
-              }
-              if (event.key === 'Escape') {
-                event.preventDefault();
-                handleClose();
               }
             }}
             placeholder={t('modals.quickComment.placeholder')}

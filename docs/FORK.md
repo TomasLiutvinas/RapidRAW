@@ -3,10 +3,12 @@
 This repository is a customized fork of `CyberTimon/RapidRAW`. The upstream remote is named
 `origin`; the personal fork remote is named `fork`.
 
-The active customized branch is `main`, integrated with upstream `ad80dd6c` on 2026-10-04
-(version 1.6.4 plus subsequent upstream changes). The integration branch is
-`integrate-upstream-2026-10-04`; the pre-update fork is preserved as
-`backup/pre-upstream-fixes-2026-10-04` at `edc535bc`.
+The active customized branch is `main`, integrated with upstream `454789b7` on 2026-10-20
+(version 1.6.6 plus subsequent upstream changes). The integration branch is
+`integrate-upstream-2026-10-20`; the pre-update fork is preserved and pushed as
+`backup/pre-upstream-2026-10-20` at `8fa33237`.
+The earlier 1.6.4 integration is retained as `integrate-upstream-2026-10-04`, with its
+pre-update backup at `backup/pre-upstream-fixes-2026-10-04` (`edc535bc`).
 The previous customized branch is `ui-performance-rotation-v1.6.2`. The last known-good pre-1.6.2
 snapshot is preserved as `backup/ui-performance-rotation-v1.5.9` at `e34da599`.
 
@@ -101,7 +103,7 @@ disabled because `linuxdeploy` is not part of this workflow.
 
    ```bash
    git fetch --prune origin
-   git fetch --prune fork
+   git fetch --prune --no-prune-tags fork
    ```
 
 4. Fast-forward the fork's `main` only when `fork/main` has no unique commits.
@@ -172,6 +174,49 @@ IPC for merged controls and workflows, and a real 3072×1536 GPU export checked 
 The integrated TypeScript diagnostics match upstream's 70 existing errors. Lint diagnostics were
 compared with both upstream and the prior fork using the updated lint configuration/dependencies.
 Native GUI testing with an actual RAW library and SD card remains a manual follow-up.
+
+## 2026-10-20 upstream integration
+
+Merged upstream `454789b7`, retaining the complete fork history. Upstream's current GPU
+pipeline, shared adjustment defaults, Kelvin white balance, finer curve dragging, tool
+visibility, auto-straighten, effects, and file-mapping fixes are combined with the fork's
+levels, color palettes, personal splash, quick search/comments, folder marks, filename
+ordering, crop rotation, and faster local release profile. GPU uniform and shader files
+match upstream; levels continue to render through the existing curves representation.
+
+The audit found shortcut definitions whose handlers had already disappeared in the previous
+integration. Quick comments (`N`), comment overlays (`C`), the shortcut map (`Shift+/`), and
+target-album membership (`Q`) now work again. Comment badges use the selected library photo
+even when another photo remains cached in the editor. The comment modal owns Escape and
+saves before closing; the shortcut map closes without navigating away from the photo.
+
+Card protection now covers upstream's shared sidecar writer, including deletion of
+default-only sidecars, XMP synchronization, auto lens correction, and legacy EXIF cache
+migration. Browsing a card does not overwrite saved folder state. Cancelling the normal
+folder picker retains Card mode; opening a normal folder restores normal roots rather than
+saving the card root. Returning home flushes pending work before releasing the card guard
+and clears the card's editor state.
+
+Validation:
+
+- Frontend production build, Rust compiler check, Rust formatting, and launcher release build.
+- Backend regression tests cover guarded metadata/default-sidecar deletion, legacy EXIF
+  preservation, cleanup (including above the guarded root), copy-out, and unrated settings.
+- Browser smoke tests with mocked IPC verify personal credit/version, card session isolation,
+  suppressed card autosave and normal autosave, quick search, comment save/navigation/Escape,
+  shortcut-map dismissal, target-album add/remove, levels dragging, color presets, Kelvin
+  mode, and crop rotation commit/drag cleanup.
+- A real 3072×1536, 16-bit TIFF export through the RTX 3090 Vulkan GPU passes tile continuity
+  checks (mean adjacent-pixel change at x=2048: 0.68 on an 8-bit inspection; separate distant
+  gradient samples confirm tiles do not repeat).
+- TypeScript diagnostics match current upstream's 67 errors by file and diagnostic code.
+  ESLint and runtime translation diagnostics are compared against upstream and the previous
+  fork; no new lint errors beyond those baselines and identical 207 translation issues.
+
+Browser IPC checks do not replace native testing with the user's actual RAW library, SD card,
+and export presets. Those remain manual smoke checks; source libraries were not modified.
+The previous launcher binary is also saved at `/tmp/RapidRAW-pre-upstream-20261020` for the
+current machine session; the pushed backup branch is the durable rollback point.
 
 ## Future import-new-only design
 
