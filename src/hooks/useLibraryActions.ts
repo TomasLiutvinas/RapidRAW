@@ -17,8 +17,32 @@ import { globalImageCache } from '../utils/ImageLRUCache';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { computeSortedLibrary } from './useSortedLibrary';
 import { expandGroupedPaths } from '../utils/imageGrouping';
+import { findAlbum } from '../utils/albums';
+import i18n from 'i18next';
+import { Panel } from '../components/ui/AppProperties';
 import { getImageFlag } from '../utils/imageFlags';
 import FilterExitToast from '../components/ui/FilterExitToast';
+
+let albumMutationQueue: Promise<void> = Promise.resolve();
+const queueAlbumMutation = <T>(operation: () => Promise<T>): Promise<T> => {
+  const result = albumMutationQueue.then(operation);
+  albumMutationQueue = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  return result;
+};
+
+export async function setTargetAlbum(targetAlbumId: string | null) {
+  useLibraryStore.getState().setLibrary({ targetAlbumId });
+  const { appSettings, handleSettingsChange } = useSettingsStore.getState();
+  if (appSettings)
+    await handleSettingsChange({
+      ...appSettings,
+      targetAlbumId,
+      openTreeSections: [...new Set([...(appSettings.openTreeSections ?? ['current']), 'albums'])],
+    });
+}
 
 const resolveTargetPaths = (paths?: string[]) => {
   const { multiSelectedPaths, imageList } = useLibraryStore.getState();
@@ -701,12 +725,38 @@ export function useLibraryActions(handleImageSelect?: (path: string, openInEdito
     }
   }, []);
 
-  const handleToggleTargetAlbumMembership = useCallback(async () => {
-    const { targetAlbumId, albumTree, multiSelectedPaths, libraryActivePath, setLibrary } = useLibraryStore.getState();
+  const handleCreateEditingSet = useCallback(async (name: string, paths: string[]): Promise<Album | undefined> => {
+    const images = [...new Set(paths)];
+    if (!name.trim() || !images.length) return;
+    return queueAlbumMutation(async () => {
+      try {
+        const tree = await invoke<AlbumItem[]>(Invokes.GetAlbums);
+        const album: Album = { id: crypto.randomUUID(), name: name.trim(), type: 'album', images };
+        await invoke(Invokes.SaveAlbums, { tree: [...tree, album] });
+        const albumTree = await invoke<AlbumItem[]>(Invokes.GetAlbums);
+        useLibraryStore.getState().setLibrary({ albumTree });
+        await setTargetAlbum(album.id);
+        return findAlbum(albumTree, album.id);
+      } catch (err) {
+        toast.error(i18n.t('editingSets.createFailed', { error: String(err) }));
+      }
+    });
+  }, []);
+
+  const handleExportAlbum = useCallback((albumId: string) => {
+    const album = findAlbum(useLibraryStore.getState().albumTree, albumId);
+    if (!album?.images.length) return;
+    const ui = useUIStore.getState();
+    ui.setPanel(Panel.Export);
+    ui.setUI({ albumExportId: albumId });
+  }, []);
+
+  const handleToggleTargetAlbumMembership = useCallback(() => {
+    const { targetAlbumId, multiSelectedPaths, libraryActivePath, setLibrary } = useLibraryStore.getState();
     const selectedImage =
       useUIStore.getState().activeView === 'editor' ? useEditorStore.getState().selectedImage : null;
     if (!targetAlbumId) {
-      toast.info('Set a target album first. Right-click an album and choose “Set as Target Album”.');
+      toast.info(i18n.t('editingSets.chooseTarget'));
       return;
     }
     const paths = selectedImage
@@ -717,54 +767,63 @@ export function useLibraryActions(handleImageSelect?: (path: string, openInEdito
           ? [libraryActivePath]
           : [];
     if (!paths.length) return;
-    const findAlbum = (nodes: AlbumItem[]): Album | undefined => {
-      for (const node of nodes) {
-        if (node.type === 'album' && node.id === targetAlbumId) return node as Album;
-        if (node.type === 'group') {
-          const album = findAlbum((node as AlbumGroup).children);
-          if (album) return album;
-        }
+    return queueAlbumMutation(async () => {
+      const tree = await invoke<AlbumItem[]>(Invokes.GetAlbums);
+      const album = findAlbum(tree, targetAlbumId);
+      if (!album) {
+        if (useLibraryStore.getState().targetAlbumId === targetAlbumId) await setTargetAlbum(null);
+        toast.error(i18n.t('editingSets.missingAlbum'));
+        return;
       }
-    };
-    const tree = structuredClone(albumTree);
-    const album = findAlbum(tree);
-    if (!album) {
-      setLibrary({ targetAlbumId: null });
-      toast.error('Target album no longer exists. Choose a new target album.');
-      return;
-    }
-    const selected = new Set(paths);
-    const removing = paths.every((path) => album.images.includes(path));
-    album.images = removing
-      ? album.images.filter((path) => !selected.has(path))
-      : [...new Set([...album.images, ...paths])];
-    try {
-      await invoke(Invokes.SaveAlbums, { tree });
-      const savedTree = await invoke<AlbumItem[]>(Invokes.GetAlbums);
-      setLibrary((state) => {
-        const feedback = {
-          action: removing ? ('removed' as const) : ('added' as const),
-          albumId: targetAlbumId,
-          token: Date.now(),
-        };
-        if (state.activeAlbumId !== targetAlbumId || !removing)
-          return { albumTree: savedTree, targetAlbumFeedback: feedback };
-        const imageList = state.imageList.filter((image) => !selected.has(image.path));
-        const activePath = imageList.some((image) => image.path === state.libraryActivePath)
-          ? state.libraryActivePath
-          : (imageList[0]?.path ?? null);
-        return {
-          albumTree: savedTree,
-          targetAlbumFeedback: feedback,
-          imageList,
-          libraryActivePath: activePath,
-          selectionAnchorPath: activePath,
-          multiSelectedPaths: state.multiSelectedPaths.filter((path) => !selected.has(path)),
-        };
-      });
-    } catch (err) {
-      toast.error(`Failed to update target album: ${err}`);
-    }
+      const selected = new Set(paths);
+      const removing = paths.every((path) => album.images.includes(path));
+      album.images = removing
+        ? album.images.filter((path) => !selected.has(path))
+        : [...new Set([...album.images, ...paths])];
+      try {
+        await invoke(Invokes.SaveAlbums, { tree });
+        const savedTree = await invoke<AlbumItem[]>(Invokes.GetAlbums);
+        setLibrary((state) => {
+          const feedback = {
+            action: removing ? ('removed' as const) : ('added' as const),
+            albumId: targetAlbumId,
+            token: Date.now(),
+          };
+          if (state.activeAlbumId !== targetAlbumId || !removing)
+            return { albumTree: savedTree, targetAlbumFeedback: feedback };
+          const imageList = state.imageList.filter((image) => !selected.has(image.path));
+          const activePath = imageList.some((image) => image.path === state.libraryActivePath)
+            ? state.libraryActivePath
+            : (imageList[0]?.path ?? null);
+          return {
+            albumTree: savedTree,
+            targetAlbumFeedback: feedback,
+            imageList,
+            libraryActivePath: activePath,
+            selectionAnchorPath: activePath,
+            multiSelectedPaths: state.multiSelectedPaths.filter((path) => !selected.has(path)),
+          };
+        });
+        const currentLibrary = useLibraryStore.getState();
+        if (
+          removing &&
+          selectedImage &&
+          currentLibrary.activeAlbumId === targetAlbumId &&
+          useEditorStore.getState().selectedImage?.path === selectedImage.path
+        ) {
+          const next = currentLibrary.libraryActivePath;
+          if (next) useUIStore.getState().imageSelectHandler?.(next, true);
+          else {
+            useEditorStore.getState().setEditor({ selectedImage: null, finalPreviewUrl: null });
+            useUIStore.getState().setUI({ activeView: 'library' });
+          }
+        }
+      } catch (err) {
+        toast.error(`Failed to update target album: ${err}`);
+      }
+    }).catch((err) => {
+      toast.error(i18n.t('editingSets.updateFailed', { error: String(err) }));
+    });
   }, []);
 
   return {
@@ -780,6 +839,8 @@ export function useLibraryActions(handleImageSelect?: (path: string, openInEdito
     refreshAllFolderTrees,
     handleTogglePinFolder,
     handleCreateAlbumItem,
+    handleCreateEditingSet,
+    handleExportAlbum,
     handleRenameAlbumItem,
     handleRemoveFromAlbum,
     handleToggleTargetAlbumMembership,

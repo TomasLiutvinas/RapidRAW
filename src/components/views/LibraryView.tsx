@@ -32,6 +32,7 @@ interface LibraryViewProps {
   handleRate: (...args: any) => void;
   handleThumbnailContextMenu: (...args: any) => void;
   handleMainLibraryContextMenu: (...args: any) => void;
+  handleSelectAlbum: (id: string, name: string, paths: string[]) => void;
   handleOpenLibrary: (...args: any) => void;
   handleGoHome: (...args: any) => void;
   handleOpenFolder: (...args: any) => void;
@@ -62,6 +63,7 @@ export default function LibraryView({
   handleRate,
   handleThumbnailContextMenu,
   handleMainLibraryContextMenu,
+  handleSelectAlbum,
   handleOpenLibrary,
   handleGoHome,
   handleOpenFolder,
@@ -160,6 +162,7 @@ export default function LibraryView({
             onClearSelection={handleClearSelection}
             onContextMenu={handleThumbnailContextMenu}
             onNavigateToFolder={handleNavigateToFolder}
+            onSelectAlbum={handleSelectAlbum}
             onOpenLibrary={handleOpenLibrary}
             onEmptyAreaContextMenu={handleMainLibraryContextMenu}
             onGoHome={handleGoHome}
@@ -196,7 +199,10 @@ export default function LibraryView({
             multiSelectedPaths={multiSelectedPaths}
             onCopy={handleCopyAdjustments}
             onExportClick={() =>
-              setUI((state) => ({ isLibraryExportPanelVisible: !state.isLibraryExportPanelVisible }))
+              setUI((state) => ({
+                isLibraryExportPanelVisible: !state.isLibraryExportPanelVisible,
+                albumExportId: null,
+              }))
             }
             onOpenCopyPasteSettings={() => setUI({ isCopyPasteSettingsModalOpen: true })}
             onPaste={() => handlePasteAdjustments()}

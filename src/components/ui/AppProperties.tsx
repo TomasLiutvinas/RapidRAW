@@ -250,6 +250,7 @@ export type CompareView = 'off' | 'vertical' | 'horizontal' | 'sideBySide';
 export type CompareMode = 'toggle' | Exclude<CompareView, 'off'>;
 
 export interface AppSettings {
+  targetAlbumId?: string | null;
   cameraImport?: {
     sourceRoot: string;
     destination: string;

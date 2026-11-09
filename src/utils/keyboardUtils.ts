@@ -509,8 +509,7 @@ export function getShortcutLabel(
   const def = KEYBIND_DEFINITIONS.find((entry) => entry.action === action);
   if (!def) return null;
 
-  const userCombo = keybinds?.[action];
-  const combo = userCombo && userCombo.length > 0 ? userCombo : def.defaultCombo;
+  const combo = keybinds?.[action] ?? getDefaultCombo(def, osPlatform);
   if (!combo || combo.length === 0) return null;
 
   return combo.map((key) => formatKeyCode(key, osPlatform)).join(' + ');

@@ -817,6 +817,10 @@ export const useKeyboardShortcuts = ({
       }
 
       const isModalOpen =
+        state.ui.editingSetPaths !== null ||
+        state.ui.isCreateAlbumModalOpen ||
+        state.ui.isCreateAlbumGroupModalOpen ||
+        state.ui.isRenameAlbumModalOpen ||
         state.ui.isCreateFolderModalOpen ||
         state.ui.isRenameFolderModalOpen ||
         state.ui.isRenameFileModalOpen ||

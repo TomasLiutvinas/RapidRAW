@@ -2061,7 +2061,7 @@
         "zoom_out": "Zoom out",
         "zoom_out_step": "Zoom out (by step)",
         "fuzzy_search": "Quick search pictures",
-        "toggle_target_album": "Toggle target album membership",
+        "toggle_target_album": "Add/remove from editing set",
         "remove_from_album": "Remove selected images from current album",
         "edit_photo_comment": "Edit photo comment",
         "toggle_comment_overlay": "Show/hide photo comment",
@@ -2524,5 +2524,27 @@
     "importNew_other": "Import {{count}} new files",
     "folderPattern": "YYYY/YYYY-MM-DD/original filename",
     "scanNotice": "The first scan may take a while to check existing files. You can stop and scan again later; completed checks are remembered."
+  },
+  "editingSets": {
+    "createFromSelection": "Create editing set from selection…",
+    "createTitle": "Create editing set",
+    "namePlaceholder": "e.g. Bar photoshoot",
+    "createButton": "Create and open album",
+    "chooseTarget": "Choose an editing set first. Right-click an album and choose “Use as editing set”.",
+    "missingAlbum": "That editing set no longer exists. Choose another album.",
+    "createFailed": "Could not create editing set: {{error}}",
+    "updateFailed": "Could not update editing set: {{error}}",
+    "useAlbum": "Use as editing set",
+    "clearTarget": "Stop adding to this album",
+    "exportAlbum": "Export album…",
+    "exportingAlbum_one": "Album: {{name}} · 1 photo",
+    "exportingAlbum_other": "Album: {{name}} · {{count}} photos",
+    "exportSelectionInstead": "Use selected photos instead",
+    "addShortcut": "Add selected photos to {{name}} ({{shortcut}})",
+    "removeShortcut": "Remove selected photos from {{name}} ({{shortcut}})",
+    "noShortcut": "Unassigned",
+    "addingTo": "Adding to:",
+    "added": "Added",
+    "removed": "Removed"
   }
 }

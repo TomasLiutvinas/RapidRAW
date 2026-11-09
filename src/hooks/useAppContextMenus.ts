@@ -89,7 +89,7 @@ import {
   reloadAdjustmentsForPaths,
   useEditorActions,
 } from './useEditorActions';
-import { useLibraryActions } from './useLibraryActions';
+import { setTargetAlbum, useLibraryActions } from './useLibraryActions';
 import { transferFiles } from './useFileOperations';
 import { globalImageCache } from '../utils/ImageLRUCache';
 import { isSameOrSubPath, removeFolderMarksUnderPath, resolveFolderMark, setFolderMark } from '../utils/folderMarks';
@@ -146,8 +146,14 @@ export function useAppContextMenus(latestProps: UseAppContextMenusProps) {
     handlePasteAdjustments,
     handleZoomChange,
   } = useEditorActions();
-  const { handleRate, handleSetFlag, handleSetColorLabel, handleTagsChanged, handleRemoveFromAlbum } =
-    useLibraryActions();
+  const {
+    handleRate,
+    handleSetFlag,
+    handleSetColorLabel,
+    handleTagsChanged,
+    handleRemoveFromAlbum,
+    handleExportAlbum,
+  } = useLibraryActions();
 
   const buildFlagMenu = useCallback(
     (paths?: string[]) => ({
@@ -987,6 +993,11 @@ export function useAppContextMenus(latestProps: UseAppContextMenusProps) {
           ],
         },
         { type: OPTION_SEPARATOR },
+        {
+          label: t('editingSets.createFromSelection'),
+          icon: Images,
+          onClick: () => setUI({ editingSetPaths: [...finalSelection] }),
+        },
         ...(isImmichAlbumId(activeAlbumId)
           ? []
           : [
@@ -1339,7 +1350,7 @@ export function useAppContextMenus(latestProps: UseAppContextMenusProps) {
       ];
       showContextMenu(event.clientX, event.clientY, options);
     },
-    [props, showContextMenu, albumIcons, t],
+    [props, showContextMenu, albumIcons, handleExportAlbum, t],
   );
 
   const handleAlbumTreeContextMenu = useCallback(
@@ -1483,12 +1494,17 @@ export function useAppContextMenus(latestProps: UseAppContextMenusProps) {
               ...(item.type === 'album'
                 ? [
                     {
-                      label:
-                        targetAlbumId === item.id
-                          ? t('contextMenus.albums.clearTargetAlbum')
-                          : t('contextMenus.albums.setTargetAlbum'),
+                      label: targetAlbumId === item.id ? t('editingSets.clearTarget') : t('editingSets.useAlbum'),
                       icon: targetAlbumId === item.id ? PinOff : Pin,
-                      onClick: () => setLibrary({ targetAlbumId: targetAlbumId === item.id ? null : item.id }),
+                      onClick: () => {
+                        void setTargetAlbum(targetAlbumId === item.id ? null : item.id);
+                      },
+                    },
+                    {
+                      label: t('editingSets.exportAlbum'),
+                      icon: FileInput,
+                      disabled: (item as Album).images.length === 0,
+                      onClick: () => handleExportAlbum(item.id),
                     },
                   ]
                 : []),
@@ -1568,7 +1584,7 @@ export function useAppContextMenus(latestProps: UseAppContextMenusProps) {
                       };
                       del(newTree);
                       if (targetAlbumId && itemContainsId(item, targetAlbumId)) {
-                        setLibrary({ targetAlbumId: null });
+                        void setTargetAlbum(null);
                       }
                       invoke(Invokes.SaveAlbums, { tree: newTree })
                         .then(() => invoke(Invokes.GetAlbums))
@@ -1584,7 +1600,7 @@ export function useAppContextMenus(latestProps: UseAppContextMenusProps) {
 
       showContextMenu(event.clientX, event.clientY, options);
     },
-    [showContextMenu, albumIcons, t],
+    [showContextMenu, albumIcons, handleExportAlbum, t],
   );
 
   const handleMainLibraryContextMenu = useCallback(

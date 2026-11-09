@@ -254,6 +254,8 @@ export interface UIState {
   importSourcePaths: Array<string>;
   folderActionTarget: string | null;
 
+  editingSetPaths: string[] | null;
+  albumExportId: string | null;
   isCreateAlbumModalOpen: boolean;
   isCreateAlbumGroupModalOpen: boolean;
   isRenameAlbumModalOpen: boolean;
@@ -344,6 +346,8 @@ export const useUIStore = create<UIState>((set, get) => ({
   importTargetFolder: null,
   importSourcePaths: [],
   folderActionTarget: null,
+  editingSetPaths: null,
+  albumExportId: null,
   isCreateAlbumModalOpen: false,
   isCreateAlbumGroupModalOpen: false,
   isRenameAlbumModalOpen: false,
@@ -461,6 +465,8 @@ export const useUIStore = create<UIState>((set, get) => ({
         renderedPanel: panel,
       };
 
+      if (panel !== Panel.Export && state.activePanels[region] === Panel.Export) updates.albumExportId = null;
+
       const isLeft = region === 'leftTop' || region === 'leftBottom';
       const isRight = region === 'rightTop' || region === 'rightBottom';
 
@@ -482,6 +488,7 @@ export const useUIStore = create<UIState>((set, get) => ({
     }),
 
   setPanel: (panelId) => {
+    if (panelId === Panel.Export) set({ albumExportId: null });
     const state = get();
     if (!panelId) return;
 

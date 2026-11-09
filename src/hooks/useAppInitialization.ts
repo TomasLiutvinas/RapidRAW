@@ -178,6 +178,7 @@ export const useAppInitialization = ({
 
         setLocalUiScale(settings.uiScale);
         setAppSettings(settings);
+        useLibraryStore.getState().setLibrary({ targetAlbumId: settings.targetAlbumId ?? null });
         i18n.changeLanguage(settings.language);
 
         if (settings?.sortCriteria) setSortCriteria(settings.sortCriteria);

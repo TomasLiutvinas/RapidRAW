@@ -381,6 +381,7 @@ function App() {
     refreshAllFolderTrees,
     handleTogglePinFolder,
     handleCreateAlbumItem,
+    handleCreateEditingSet,
     handleRenameAlbumItem,
   } = useLibraryActions(handleImageSelect);
 
@@ -751,7 +752,7 @@ function App() {
               onSettingsChange={handleSettingsChange}
               rootPaths={rootPaths}
               isVisible={true}
-              onClose={() => setUI({ isLibraryExportPanelVisible: false })}
+              onClose={() => setUI({ isLibraryExportPanelVisible: false, albumExportId: null })}
             />
           );
         case Panel.Adjustments:
@@ -1000,6 +1001,7 @@ function App() {
                     handleRate={handleRate}
                     handleThumbnailContextMenu={handleThumbnailContextMenu}
                     handleMainLibraryContextMenu={handleMainLibraryContextMenu}
+                    handleSelectAlbum={handleSelectAlbum}
                     handleOpenLibrary={handleOpenLibrary}
                     handleGoHome={handleGoHome}
                     handleOpenFolder={handleOpenFolder}
@@ -1067,6 +1069,10 @@ function App() {
           handleRate={handleRate}
           executeDelete={executeDelete}
           handleSaveCollage={handleSaveCollage}
+          handleCreateEditingSet={async (name, paths) => {
+            const album = await handleCreateEditingSet(name, paths);
+            if (album) await handleSelectAlbum(album.id, album.name, album.images);
+          }}
           handleCreateAlbumItem={handleCreateAlbumItem}
           handleRenameAlbumItem={handleRenameAlbumItem}
         />

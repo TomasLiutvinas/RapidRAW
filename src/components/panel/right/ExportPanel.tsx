@@ -1,3 +1,5 @@
+import { findAlbum } from '../../../utils/albums';
+import { useLibraryStore } from '../../../store/useLibraryStore';
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
@@ -407,7 +409,11 @@ export default function ExportPanel({
   const isCancelling = status === Status.Cancelling;
   const isLibraryContext = !!onClose;
 
+  const albumExportId = useUIStore((state) => state.albumExportId);
+  const albumTree = useLibraryStore((state) => state.albumTree);
+  const exportAlbum = findAlbum(albumTree, albumExportId);
   const pathsToExport = useMemo(() => {
+    if (exportAlbum) return [...new Set(exportAlbum.images)];
     return isLibraryContext
       ? multiSelectedPaths
       : multiSelectedPaths.length > 0
@@ -415,7 +421,7 @@ export default function ExportPanel({
         : selectedImage
           ? [selectedImage.path]
           : [];
-  }, [isLibraryContext, multiSelectedPaths, selectedImage?.path]);
+  }, [isLibraryContext, multiSelectedPaths, selectedImage?.path, exportAlbum]);
 
   const numImages = pathsToExport.length;
 
@@ -743,6 +749,21 @@ export default function ExportPanel({
       <div className="p-3 flex justify-between items-center shrink-0 border-b border-surface">
         <Text variant={TextVariants.title}>{t('export.title')}</Text>
       </div>
+      {exportAlbum && (
+        <div className="mx-3 mt-3 rounded-md border border-[#ff9e00]/30 bg-surface p-3 text-sm">
+          <p className="font-semibold text-text-primary">
+            {t('editingSets.exportingAlbum', { name: exportAlbum.name, count: pathsToExport.length })}
+          </p>
+          <button
+            type="button"
+            disabled={isExporting}
+            className="mt-1 text-xs text-text-secondary underline"
+            onClick={() => useUIStore.getState().setUI({ albumExportId: null })}
+          >
+            {t('editingSets.exportSelectionInstead')}
+          </button>
+        </div>
+      )}
       <div className="grow overflow-y-auto p-3 space-y-8">
         {numImages > 0 ? (
           <>

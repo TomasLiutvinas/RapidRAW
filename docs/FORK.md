@@ -310,3 +310,35 @@ Validation on 2026-11-10:
 
 The pre-feature launcher binary is saved at `/tmp/RapidRAW-pre-camera-import-20261110` for this
 machine session. Future upstream updates must retain this copy-only workflow and its safeguards.
+
+## Editing sets
+
+An editing set is an ordinary saved album of references to existing photos. In Folders, select a
+range or individual photos, right-click, and choose **Create editing set from selection…**. Naming
+it creates the album with that selection, makes it the target, expands Albums, and opens the album.
+Existing albums can be chosen with **Use as editing set** in their context menu. The target is
+remembered in the `targetAlbumId` application setting; it is cleared when the album is deleted.
+
+The target album row displays the configured **Q** membership shortcut instead of a generic target
+symbol, alongside its photo count. It is also shown in an **Adding to: Album · count** bar while
+browsing folders. The badge is clickable, highlights when the selected photos are already members,
+and briefly reacts to additions/removals. All selected members are removed; otherwise missing
+photos are added. The current photo is used in the editor. Custom bindings and disabled bindings
+are reflected in the badge. **Shift+Q** still removes photos from the currently viewed album.
+
+Membership changes capture the photos selected at the time of each keypress and serialize their
+album writes. Creating an editing set uses the same queue. Removing the current editor photo from
+the active album advances to another remaining photo, or returns to the library if the album empties.
+No source images are moved or copied to form an album, and edits remain attached to each photo.
+
+**Export album…** is available on the album context menu and the target bar. The export panel labels
+which album is being exported and uses all of its photos, independently of the current selection
+or filters. **Use selected photos instead** returns to ordinary selection export. Focusing the export
+panel must preserve explicit album export; opening an ordinary export action clears that mode.
+
+Validation: production frontend/Rust builds and the existing backend suite; TypeScript diagnostics
+match the prior 63-error baseline, with no new ESLint diagnostics. Browser tests with synthetic
+photos and mocked IPC cover creation from a multi-selection, automatic targeting/opening, Q add/remove,
+Alt+Q remapping, disabled bindings, queued keypresses retaining their captured selections, preference
+restoration after reload, and a complete album export request while only one photo is selected.
+Real library photos and album files were not changed during testing.

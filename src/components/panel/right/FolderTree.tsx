@@ -34,6 +34,7 @@ import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
 import { useDroppable } from '@dnd-kit/core';
 import Text from '../../ui/Text';
+import TargetAlbumShortcut from '../../ui/TargetAlbumShortcut';
 import { TextColors, TextVariants, TextWeights } from '../../../types/typography';
 import { useShallow } from 'zustand/react/shallow';
 import { useLibraryStore } from '../../../store/useLibraryStore';
@@ -369,6 +370,8 @@ function AlbumTreeNode({
   showImageCounts: boolean;
   isLayoutDragging: boolean;
 }) {
+  const targetAlbumId = useLibraryStore((state) => state.targetAlbumId);
+  const isTarget = item.id === targetAlbumId && item.type === 'album';
   const isGroup = item.type === 'group';
   const isExpanded = expandedGroups.has(item.id);
   const isSelected = item.id === selectedAlbumId;
@@ -433,7 +436,7 @@ function AlbumTreeNode({
             color={TextColors.secondary}
             className={clsx(
               'ml-auto min-w-8 shrink-0 text-right tabular-nums transition-opacity ease-in-out duration-300',
-              showImageCounts ? 'opacity-100' : 'opacity-0',
+              showImageCounts || isTarget ? 'opacity-100' : 'opacity-0',
             )}
           >
             {imageCount}
@@ -451,7 +454,12 @@ function AlbumTreeNode({
             {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </div>
         )}
-        {!isGroup && <div className="w-5 h-5 shrink-0" aria-hidden="true" />}
+        {!isGroup &&
+          (isTarget ? (
+            <TargetAlbumShortcut album={item as Album} />
+          ) : (
+            <div className="w-5 h-5 shrink-0" aria-hidden="true" />
+          ))}
       </div>
 
       <AnimatePresence>

@@ -45,6 +45,7 @@ import { useUIStore } from '../../store/useUIStore';
 import SettingsPanel from './SettingsPanel';
 
 import LibraryGrid from './library/LibraryGrid';
+import EditingSetBar from './library/EditingSetBar';
 import { JobsMenu, SearchInput, ViewOptionsDropdown } from './library/LibraryHeader';
 
 export interface ColumnWidths {
@@ -84,6 +85,7 @@ interface MainLibraryProps {
   onGoHome(): void;
   onImageClick(path: string, event: any): void;
   onImageDoubleClick(path: string): void;
+  onSelectAlbum(id: string, name: string, paths: string[]): void;
   onImportClick(): void;
   onLibraryRefresh(): void;
   onOpenFolder(): void;
@@ -686,6 +688,7 @@ export default function MainLibrary(props: MainLibraryProps) {
           </>
         )}
       </header>
+      <EditingSetBar onOpen={props.onSelectAlbum} />
 
       {props.imageList.length > 0 ? (
         libraryDisplayMode === LibraryDisplayMode.Cull ? (

@@ -39,6 +39,7 @@ export interface AppModalsProps {
   handleRate: (rating: number, paths?: string[]) => void;
   executeDelete: (paths: string[], options: any) => Promise<void>;
   handleSaveCollage: (base64Data: string, firstPath: string) => Promise<string>;
+  handleCreateEditingSet: (name: string, paths: string[]) => Promise<void>;
   handleCreateAlbumItem: (name: string, type: 'album' | 'group') => Promise<void>;
   handleRenameAlbumItem: (newName: string) => Promise<void>;
 }
@@ -118,6 +119,8 @@ export default function AppModals(props: AppModalsProps) {
     })),
   );
 
+  const editingSetPaths = useUIStore((state) => state.editingSetPaths);
+
   const { imageList, libraryActivePath } = useLibraryStore(
     useShallow((state) => ({
       imageList: state.imageList,
@@ -151,6 +154,16 @@ export default function AppModals(props: AppModalsProps) {
   return (
     <>
       <CameraImportModal />
+      <CreateFolderModal
+        isOpen={editingSetPaths !== null}
+        onClose={() => setUI({ editingSetPaths: null })}
+        onSave={(name) => {
+          if (editingSetPaths) void props.handleCreateEditingSet(name, editingSetPaths);
+        }}
+        title={t('editingSets.createTitle')}
+        placeholder={t('editingSets.namePlaceholder')}
+        buttonText={t('editingSets.createButton')}
+      />
       <FuzzySearchModal
         images={imageList}
         isOpen={isFuzzySearchModalOpen}
