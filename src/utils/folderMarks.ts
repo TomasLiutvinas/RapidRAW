@@ -10,7 +10,10 @@ export const isSameOrSubPath = (path: string, parentPath: string): boolean => {
   return path === parentPath || path.startsWith(`${parentPath}/`) || path.startsWith(`${parentPath}\\`);
 };
 
-export const resolveFolderMark = (path: string | null | undefined, folderMarks?: FolderMarks | null): FolderMark | null => {
+export const resolveFolderMark = (
+  path: string | null | undefined,
+  folderMarks?: FolderMarks | null,
+): FolderMark | null => {
   if (!path || !folderMarks) return null;
 
   return (
@@ -36,10 +39,7 @@ export const setFolderMark = (
   return next;
 };
 
-export const removeFolderMarksUnderPath = (
-  folderMarks: FolderMarks | undefined | null,
-  path: string,
-): FolderMarks => {
+export const removeFolderMarksUnderPath = (folderMarks: FolderMarks | undefined | null, path: string): FolderMarks => {
   return Object.fromEntries(
     Object.entries(folderMarks || {}).filter(([markedPath]) => !isSameOrSubPath(markedPath, path)),
   ) as FolderMarks;

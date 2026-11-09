@@ -3,10 +3,12 @@
 This repository is a customized fork of `CyberTimon/RapidRAW`. The upstream remote is named
 `origin`; the personal fork remote is named `fork`.
 
-The active customized branch is `main`, integrated with upstream `454789b7` on 2026-10-20
-(version 1.6.6 plus subsequent upstream changes). The integration branch is
-`integrate-upstream-2026-10-20`; the pre-update fork is preserved and pushed as
-`backup/pre-upstream-2026-10-20` at `8fa33237`.
+The active customized branch is `main`, integrated with upstream `aa419508` on 2026-11-10
+(version 1.6.9 plus the natural filename sorting fix). The integration branch is
+`integrate-upstream-2026-11-09`; the pre-update fork is preserved and pushed as
+`backup/pre-upstream-2026-11-09` at `877e779b`.
+The previous 1.6.6 integration remains at `integrate-upstream-2026-10-20`, with its
+pre-update backup at `backup/pre-upstream-2026-10-20` (`8fa33237`).
 The earlier 1.6.4 integration is retained as `integrate-upstream-2026-10-04`, with its
 pre-update backup at `backup/pre-upstream-fixes-2026-10-04` (`edc535bc`).
 The previous customized branch is `ui-performance-rotation-v1.6.2`. The last known-good pre-1.6.2
@@ -107,9 +109,10 @@ disabled because `linuxdeploy` is not part of this workflow.
    ```
 
 4. Fast-forward the fork's `main` only when `fork/main` has no unique commits.
-5. Create a new integration branch from `origin/main`.
-6. Replay fork commits in small logical groups. Resolve conflicts against current upstream APIs;
-   do not select entire old files merely to make conflicts disappear.
+5. Create a new integration branch from the current customized branch and merge `origin/main`
+   with `--no-commit --no-ff`, preserving both histories.
+6. Resolve and audit overlaps in small logical groups against current upstream APIs; do not select
+   entire old files merely to make conflicts disappear.
 7. Review every item in the test matrix below.
 8. Keep the previous customized branch until the integrated build has been used successfully.
 
@@ -217,6 +220,45 @@ Browser IPC checks do not replace native testing with the user's actual RAW libr
 and export presets. Those remain manual smoke checks; source libraries were not modified.
 The previous launcher binary is also saved at `/tmp/RapidRAW-pre-upstream-20261020` for the
 current machine session; the pushed backup branch is the durable rollback point.
+
+## 2026-11-10 upstream integration
+
+Merged upstream `aa419508` (1.6.9 plus natural filename sorting), retaining the complete fork
+history and the personal splash, quick search/comments, shortcut map, target-album shortcuts,
+folder marks, filename ordering, levels, color palettes, Card mode, packaging, and local release
+profile. Upstream's new GPU, lens correction, editor, crop, Immich, and metadata architecture is
+retained. GPU processing, image processing, and shader files match upstream exactly.
+
+Adapted Card protection to the new atomic sidecar updates and shared generated-output writers.
+Reading a corrupt sidecar does not quarantine it on a card; reading bloated EXIF does not rewrite
+it. Batch processing, XMP sync, and shared output writers retain backend write guards. The local
+copy stage is shared by the async copy command and its regression test. Quick search now reads
+the editor selection and thumbnails explicitly after upstream removed the old subscriptions.
+Context-menu album removal keeps upstream's Immich handler alongside the fork's local shortcut.
+Outside-crop rotation hit areas now follow the viewport crop wrapper through zoom and pan.
+
+Validation:
+
+- Frontend production build, Rust compiler check, Rust formatting, and final Tauri launcher build.
+- Both backend regression tests pass, covering guarded metadata and atomic/generated writes,
+  corrupt/bloated sidecar preservation, legacy EXIF, cleanup above the card root, copy-out, and
+  unrated-filter serialization.
+- Browser checks with synthetic photos and mocked Tauri IPC verify personal credit/version,
+  quick-search filtering, comment save-on-Escape, shortcut-map dismissal, target-album add/remove,
+  Card mode header/session isolation, suppressed card autosave and normal autosave, levels-handle
+  dragging, color preset selection, and an actual pointer drag committing crop rotation.
+- A real 3072×1536 16-bit TIFF export on the RTX 3090 Vulkan GPU passes continuity checks:
+  mean adjacent-pixel change at x=2048 is 0.345 on an 8-bit inspection; distant gradient samples
+  differ as expected. The export used temporary configuration/cache/data directories under `/tmp`.
+- TypeScript diagnostics match upstream's 63 errors by file and diagnostic code. ESLint adds no
+  errors over upstream; two existing fork literal-string warnings remain. Exact check logs for
+  this session are under `/tmp/rapidraw-*.log`, including the upstream comparison logs.
+- Runtime translations validate 1890 plural resolutions and 31892 placeholder sets across 17 locales.
+
+The launcher binary is rebuilt at its existing path. Its previous version is saved at
+`/tmp/RapidRAW-pre-upstream-20261109`; the pushed backup branch is the durable rollback point.
+Native GUI testing with the user's actual RAW library, physical SD card, and saved export presets
+remains manual. Browser mocks and the synthetic GPU export do not exercise those real inputs.
 
 ## Future import-new-only design
 

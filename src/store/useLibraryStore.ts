@@ -51,6 +51,7 @@ interface LibraryState {
   // Images & Selection
   imageList: Array<ImageFile>;
   imageRatings: Record<string, number>;
+  exifByPath: Record<string, Record<string, string>>;
   multiSelectedPaths: Array<string>;
   selectionAnchorPath: string | null;
   libraryActivePath: string | null;
@@ -69,6 +70,7 @@ interface LibraryState {
   libraryScrollTop: number;
   listColumnWidths: ColumnWidths;
   libraryColumnCount: number;
+  libraryGridRows: Array<Array<{ path: string; center: number }>>;
 
   // Navigation History
   navHistory: NavHistoryItem[];
@@ -99,6 +101,7 @@ export const useLibraryStore = create<LibraryState>((set) => ({
 
   imageList: [],
   imageRatings: {},
+  exifByPath: {},
   multiSelectedPaths: [],
   selectionAnchorPath: null,
   libraryActivePath: null,
@@ -114,6 +117,7 @@ export const useLibraryStore = create<LibraryState>((set) => ({
   isViewLoading: false,
   libraryScrollTop: 0,
   libraryColumnCount: 1,
+  libraryGridRows: [],
   listColumnWidths: {
     thumbnail: 4,
     name: 20,

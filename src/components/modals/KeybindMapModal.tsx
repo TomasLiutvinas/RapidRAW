@@ -1,3 +1,4 @@
+import type { ParseKeys } from 'i18next';
 import { Keyboard, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -45,14 +46,16 @@ export default function KeybindMapModal({ isOpen, onClose }: KeybindMapModalProp
             return (
               <section className="rounded-lg bg-bg-secondary/50 p-3" key={section.id}>
                 <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-secondary">
-                  {t(section.label as any)}
+                  {t(section.label as ParseKeys)}
                 </h3>
                 <div className="space-y-1">
                   {definitions.map((definition) => {
                     const shortcut = getShortcutLabel(definition.action, appSettings?.keybinds, osPlatform) || '—';
                     return (
                       <div className="flex items-center justify-between gap-3 py-1" key={definition.action}>
-                        <span className="min-w-0 truncate text-sm text-text-primary">{t(definition.description as any)}</span>
+                        <span className="min-w-0 truncate text-sm text-text-primary">
+                          {t(definition.description as ParseKeys)}
+                        </span>
                         <kbd className="shrink-0 rounded-md border border-border-color bg-surface px-2 py-1 text-xs text-text-secondary shadow-sm">
                           {shortcut}
                         </kbd>
