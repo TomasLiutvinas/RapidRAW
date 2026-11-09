@@ -1477,7 +1477,6 @@
     "splash": {
       "addFolder": "Aggiungi Cartella",
       "brand": "RapidRAW",
-      "continueSession": "Continua Sessione",
       "contribute": "Contribuisci su GitHub",
       "descriptionAndroid": "Un editor di immagini RAW velocissimo e con accelerazione GPU. Apri la libreria per iniziare.",
       "descriptionDesktop": "Un editor di immagini RAW velocissimo e con accelerazione GPU. Apri una cartella per iniziare.",
@@ -1492,7 +1491,7 @@
       "or": "oppure",
       "version": "Versione {{version}}",
       "welcomeBack": "Bentornato!",
-      "welcomeBackDesc": "Continua da dove avevi interrotto o inizia una nuova sessione."
+      "welcomeBackDesc": "Apri la libreria o aggiungi un'altra cartella."
     },
     "status": {
       "downloading": "Download in corso {{status}}...",

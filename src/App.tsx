@@ -360,7 +360,7 @@ function App() {
     handleNavBack,
     handleNavForward,
     handleBrowseCard,
-    handleContinueSession,
+    handleOpenLibrary,
   } = useAppNavigation({
     clearThumbnailQueue,
     refs: navigationRefs,
@@ -1000,7 +1000,7 @@ function App() {
                     handleRate={handleRate}
                     handleThumbnailContextMenu={handleThumbnailContextMenu}
                     handleMainLibraryContextMenu={handleMainLibraryContextMenu}
-                    handleContinueSession={handleContinueSession}
+                    handleOpenLibrary={handleOpenLibrary}
                     handleGoHome={handleGoHome}
                     handleOpenFolder={handleOpenFolder}
                     handleBrowseCard={handleBrowseCard}

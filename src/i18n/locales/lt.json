@@ -1529,7 +1529,6 @@
     "splash": {
       "addFolder": "Pridėti aplanką",
       "brand": "RapidRAW",
-      "continueSession": "Tęsti seansą",
       "contribute": "Prisidėti prie GitHub",
       "descriptionAndroid": "Žaibiškai greitas, GPU spartinamas RAW nuotraukų redaktorius. Pradėkite atidarę biblioteką.",
       "descriptionDesktop": "Žaibiškai greitas, GPU spartinamas RAW nuotraukų redaktorius. Pradėkite atidarę aplanką.",
@@ -1544,7 +1543,7 @@
       "or": "arba",
       "version": "Versija {{version}}",
       "welcomeBack": "Sveiki sugrįžę!",
-      "welcomeBackDesc": "Tęskite nuo ten, kur baigėte, arba pradėkite naują seansą."
+      "welcomeBackDesc": "Atidarykite biblioteką arba pridėkite kitą aplanką."
     },
     "status": {
       "downloading": "Atsisiunčiama {{status}}...",

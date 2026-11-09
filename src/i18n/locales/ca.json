@@ -1458,7 +1458,6 @@
     "splash": {
       "addFolder": "Afegir carpeta",
       "brand": "RapidRAW",
-      "continueSession": "Continuar sessió",
       "contribute": "Contribuir a GitHub",
       "descriptionAndroid": "Un editor d'imatges RAW increïblement ràpid i accelerat per GPU. Obriu la biblioteca per començar.",
       "descriptionDesktop": "Un editor d'imatges RAW increïblement ràpid i accelerat per GPU. Obriu una carpeta per començar.",
@@ -1473,7 +1472,7 @@
       "or": "o",
       "version": "Versió {{version}}",
       "welcomeBack": "Benvingut/da de nou!",
-      "welcomeBackDesc": "Continueu on ho vau deixar o inicieu una nova sessió."
+      "welcomeBackDesc": "Obriu la biblioteca o afegiu una altra carpeta."
     },
     "status": {
       "downloading": "S'està baixant {{status}}...",

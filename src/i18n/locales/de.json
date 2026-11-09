@@ -1463,7 +1463,6 @@
     "splash": {
       "addFolder": "Ordner hinzufügen",
       "brand": "RapidRAW",
-      "continueSession": "Sitzung fortsetzen",
       "contribute": "Auf GitHub beitragen",
       "descriptionAndroid": "Ein blitzschneller, GPU-beschleunigter RAW-Bildeditor. Öffnen Sie die Bibliothek, um zu beginnen.",
       "descriptionDesktop": "Ein blitzschneller, GPU-beschleunigter RAW-Bildeditor. Öffnen Sie einen Ordner, um zu beginnen.",
@@ -1478,7 +1477,7 @@
       "or": "oder",
       "version": "Version {{version}}",
       "welcomeBack": "Willkommen zurück!",
-      "welcomeBackDesc": "Sitzung fortsetzen oder neu starten."
+      "welcomeBackDesc": "Öffne deine Bibliothek oder füge einen weiteren Ordner hinzu."
     },
     "status": {
       "downloading": "Wird heruntergeladen {{status}}...",

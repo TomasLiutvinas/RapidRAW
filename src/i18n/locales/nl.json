@@ -1426,7 +1426,6 @@
     "splash": {
       "addFolder": "Map toevoegen",
       "brand": "RapidRAW",
-      "continueSession": "Sessie voortzetten",
       "contribute": "Bijdragen op GitHub",
       "descriptionAndroid": "Een razendsnelle, GPU-versnelde RAW-beeldeditor. Open de bibliotheek om te beginnen.",
       "descriptionDesktop": "Een razendsnelle, GPU-versnelde RAW-beeldeditor. Open een map om te beginnen.",
@@ -1441,7 +1440,7 @@
       "or": "of",
       "version": "Versie {{version}}",
       "welcomeBack": "Welkom terug!",
-      "welcomeBackDesc": "Ga verder waar u gebleven was of begin een nieuwe sessie."
+      "welcomeBackDesc": "Open je bibliotheek of voeg een andere map toe."
     },
     "status": {
       "downloading": "Downloaden {{status}}...",

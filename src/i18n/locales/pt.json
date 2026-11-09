@@ -1477,7 +1477,6 @@
     "splash": {
       "addFolder": "Adicionar Pasta",
       "brand": "RapidRAW",
-      "continueSession": "Continuar Sessão",
       "contribute": "Contribuir no GitHub",
       "descriptionAndroid": "Um editor de imagens RAW ultrarrápido e acelerado por GPU. Abra a biblioteca para começar.",
       "descriptionDesktop": "Um editor de imagens RAW ultrarrápido e acelerado por GPU. Abra uma pasta para começar.",
@@ -1492,7 +1491,7 @@
       "or": "ou",
       "version": "Versão {{version}}",
       "welcomeBack": "Bem-vindo de volta!",
-      "welcomeBackDesc": "Continue de onde parou ou inicie uma nova sessão."
+      "welcomeBackDesc": "Abra a biblioteca ou adicione outra pasta."
     },
     "status": {
       "downloading": "Baixando {{status}}...",

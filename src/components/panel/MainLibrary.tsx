@@ -79,7 +79,7 @@ interface MainLibraryProps {
   onClearSelection(): void;
   onContextMenu(event: any, path: string): void;
   onNavigateToFolder(path: string): void;
-  onContinueSession(): void;
+  onOpenLibrary(): void;
   onEmptyAreaContextMenu(event: any): void;
   onGoHome(): void;
   onImageClick(path: string, event: any): void;
@@ -418,10 +418,10 @@ export default function MainLibrary(props: MainLibraryProps) {
                       {hasLastPath && (
                         <Button
                           className="rounded-md h-11 w-full flex justify-center items-center shadow-md transition-transform duration-200 hover:scale-[1.01] active:scale-[.98]"
-                          onClick={props.onContinueSession}
+                          onClick={props.onOpenLibrary}
                           size="lg"
                         >
-                          <RefreshCw size={20} className="mr-2" /> {t('library.splash.continueSession')}
+                          <RefreshCw size={20} className="mr-2" /> {t('library.splash.openLibrary')}
                         </Button>
                       )}
                       <div className="flex items-center gap-2">

@@ -140,7 +140,7 @@ npm run build:local
 
 - Launch screen uses the personal image and correct attribution.
 - Version shown by the app matches `src-tauri/tauri.conf.json`.
-- Existing library/session restores.
+- Existing library restores.
 - Selecting a leaf folder shows its images.
 - In `flat` mode, a parent containing only subfolders may be empty.
 - In `recursive` mode, selecting that parent shows all descendant images.
@@ -157,7 +157,7 @@ npm run build:local
 - Card mode rejects edits, comments, metadata changes, rename, move, delete, tagging, virtual copies,
   and filename ordering without creating `.rrdata` or XMP files on the card.
 - Card mode can copy/import files to a normal writable destination.
-- Returning home and continuing the previous session restores the normal library.
+- Returning home and choosing Open Library restores the saved folders and browsing location.
 
 ## 2026-10-04 upstream integration
 

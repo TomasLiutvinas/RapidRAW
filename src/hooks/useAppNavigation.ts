@@ -673,7 +673,7 @@ export function useAppNavigation({ clearThumbnailQueue, refs }: AppNavigationPro
     }
   };
 
-  const handleContinueSession = () => {
+  const handleOpenLibrary = () => {
     const restore = async () => {
       const { appSettings } = useSettingsStore.getState();
       const { setLibrary } = useLibraryStore.getState();
@@ -759,7 +759,7 @@ export function useAppNavigation({ clearThumbnailQueue, refs }: AppNavigationPro
               await handleSelectSubfolder(rootFolders[0], false, undefined, false);
             }
           } catch (e) {
-            console.error('Failed to restore album session:', e);
+            console.error('Failed to open saved album:', e);
             await handleSelectSubfolder(rootFolders[0], false, undefined, false);
           }
         } else {
@@ -771,8 +771,8 @@ export function useAppNavigation({ clearThumbnailQueue, refs }: AppNavigationPro
     };
 
     restore().catch((err) => {
-      console.error('Failed to restore session:', err);
-      toast.error('Failed to restore session. A folder may have been moved or deleted.');
+      console.error('Failed to open library:', err);
+      toast.error('Failed to open library. A folder may have been moved or deleted.');
       handleGoHome();
       useLibraryStore.getState().setLibrary({ isTreeLoading: false });
     });
@@ -788,6 +788,6 @@ export function useAppNavigation({ clearThumbnailQueue, refs }: AppNavigationPro
     handleNavBack,
     handleNavForward,
     handleBrowseCard,
-    handleContinueSession,
+    handleOpenLibrary,
   };
 }

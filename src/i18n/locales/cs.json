@@ -1490,7 +1490,6 @@
     "splash": {
       "addFolder": "Přidat složku",
       "brand": "RapidRAW",
-      "continueSession": "Pokračovat v relaci",
       "contribute": "Přispějte na GitHubu",
       "descriptionAndroid": "Ohromně rychlý editor snímků RAW s akcelerací GPU. Otevřete knihovnu a začněte.",
       "descriptionDesktop": "Ohromně rychlý editor snímků RAW s akcelerací GPU. Otevřete složku a začněte.",
@@ -1505,7 +1504,7 @@
       "or": "nebo",
       "version": "Verze {{version}}",
       "welcomeBack": "Vítejte zpět!",
-      "welcomeBackDesc": "Pokračujte tam, kde jste přestali, nebo začněte novou relaci."
+      "welcomeBackDesc": "Otevřete knihovnu nebo přidejte další složku."
     },
     "status": {
       "downloading": "Stahování {{status}}...",

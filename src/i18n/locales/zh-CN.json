@@ -1457,7 +1457,6 @@
     "splash": {
       "addFolder": "添加文件夹",
       "brand": "RapidRAW",
-      "continueSession": "继续会话",
       "contribute": "在 GitHub 上贡献",
       "descriptionAndroid": "一款极速、GPU 加速的 RAW 图像编辑器。打开图库以开始。",
       "descriptionDesktop": "一款极速、GPU 加速的 RAW 图像编辑器。打开文件夹以开始。",
@@ -1472,7 +1471,7 @@
       "or": "或",
       "version": "版本 {{version}}",
       "welcomeBack": "欢迎回来！",
-      "welcomeBackDesc": "继续上次的进度或开始新会话。"
+      "welcomeBackDesc": "打开图库或添加其他文件夹。"
     },
     "status": {
       "downloading": "下载中 {{status}}...",

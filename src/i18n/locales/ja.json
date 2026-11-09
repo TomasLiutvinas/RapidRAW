@@ -1457,7 +1457,6 @@
     "splash": {
       "addFolder": "フォルダを追加",
       "brand": "RapidRAW",
-      "continueSession": "セッションを続行",
       "contribute": "GitHubで貢献する",
       "descriptionAndroid": "圧倒的に高速な、GPUアクセラレーション対応RAW画像エディタ。ライブラリを開いて始めましょう。",
       "descriptionDesktop": "圧倒的に高速な、GPUアクセラレーション対応RAW画像エディタ。フォルダを開いて始めましょう。",
@@ -1472,7 +1471,7 @@
       "or": "または",
       "version": "バージョン {{version}}",
       "welcomeBack": "おかえりなさい！",
-      "welcomeBackDesc": "前回の続きから始めるか、新しいセッションを開始します。"
+      "welcomeBackDesc": "ライブラリを開くか、別のフォルダーを追加してください。"
     },
     "status": {
       "downloading": "{{status}}をダウンロード中...",

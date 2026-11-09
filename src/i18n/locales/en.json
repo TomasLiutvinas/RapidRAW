@@ -1463,7 +1463,6 @@
     "splash": {
       "addFolder": "Add Folder",
       "brand": "RapidRAW",
-      "continueSession": "Continue Session",
       "contribute": "Contribute on GitHub",
       "descriptionAndroid": "A blazingly fast, GPU-accelerated RAW image editor. Open the library to begin.",
       "descriptionDesktop": "A blazingly fast, GPU-accelerated RAW image editor. Open a folder to begin.",
@@ -1478,7 +1477,7 @@
       "or": "or",
       "version": "Version {{version}}",
       "welcomeBack": "Welcome back!",
-      "welcomeBackDesc": "Continue where you left off or start a new session."
+      "welcomeBackDesc": "Open your library or add another folder."
     },
     "status": {
       "downloading": "Downloading {{status}}...",
