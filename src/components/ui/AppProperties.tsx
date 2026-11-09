@@ -250,6 +250,13 @@ export type CompareView = 'off' | 'vertical' | 'horizontal' | 'sideBySide';
 export type CompareMode = 'toggle' | Exclude<CompareView, 'off'>;
 
 export interface AppSettings {
+  cameraImport?: {
+    sourceRoot: string;
+    destination: string;
+    includeRaw: boolean;
+    includeJpeg: boolean;
+    includeVideos: boolean;
+  };
   aiCacheLimitGb?: number;
   aiMapsCacheLimitGb?: number;
   thumbnailCacheLimitGb?: number;

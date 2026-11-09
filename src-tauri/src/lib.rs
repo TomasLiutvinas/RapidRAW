@@ -34,6 +34,7 @@ mod auto_straighten;
 mod baseline_exposure;
 mod bm3d;
 mod cache_utils;
+mod camera_import;
 mod camera_tethering;
 mod clone_heal;
 mod culling;
@@ -2946,6 +2947,10 @@ pub fn run() {
             file_management::set_rating_for_paths,
             file_management::set_flag_for_paths,
             file_management::import_files,
+            camera_import::camera_import_status,
+            camera_import::camera_import_scan,
+            camera_import::camera_import_run,
+            camera_import::camera_import_cancel,
             file_management::create_virtual_copy,
             file_management::get_albums,
             file_management::save_albums,

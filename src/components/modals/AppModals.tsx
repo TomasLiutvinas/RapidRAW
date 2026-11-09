@@ -14,6 +14,7 @@ import RenameFolderModal from './RenameFolderModal';
 import RenameFileModal from './RenameFileModal';
 import ConfirmModal from './ConfirmModal';
 import ImportSettingsModal from './ImportSettingsModal';
+import CameraImportModal from './CameraImportModal';
 import CullingModal from './CullingModal';
 import CollageModal from './CollageModal';
 import FuzzySearchModal from './FuzzySearchModal';
@@ -149,6 +150,7 @@ export default function AppModals(props: AppModalsProps) {
 
   return (
     <>
+      <CameraImportModal />
       <FuzzySearchModal
         images={imageList}
         isOpen={isFuzzySearchModalOpen}

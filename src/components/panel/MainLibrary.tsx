@@ -22,6 +22,7 @@ import CullingView from './library/CullingView';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import Button from '../ui/Button';
+import CameraImportButton from '../ui/CameraImportButton';
 import { ThemeProps, THEMES, DEFAULT_THEME_ID } from '../../utils/themes';
 import {
   AppSettings,
@@ -448,6 +449,7 @@ export default function MainLibrary(props: MainLibraryProps) {
                           <Settings size={20} />
                         </Button>
                       </div>
+                      {!props.isAndroid && <CameraImportButton />}
                       {!props.isAndroid && (
                         <Button
                           className="rounded-md h-11 w-full flex justify-center items-center bg-surface text-text-primary shadow-md transition-transform duration-200 hover:scale-[1.01] active:scale-[.98]"
@@ -652,6 +654,7 @@ export default function MainLibrary(props: MainLibraryProps) {
                     <MemoryStick className="w-5 h-5" />
                   </Button>
                 )}
+                {!props.isAndroid && <CameraImportButton compact />}
                 <JobsMenu onNavigateToFolder={props.onNavigateToFolder} />
                 {props.isAndroid && (
                   <Button

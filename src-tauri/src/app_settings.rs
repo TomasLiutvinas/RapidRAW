@@ -565,6 +565,8 @@ pub fn default_open_tree_sections() -> Vec<String> {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct AppSettings {
+    #[serde(default)]
+    pub camera_import: crate::camera_import::CameraImportOptions,
     pub last_root_path: Option<String>,
     #[serde(default)]
     pub root_folders: Vec<String>,
@@ -805,6 +807,7 @@ pub fn wgpu_renderer_supported() -> bool {
 impl Default for AppSettings {
     fn default() -> Self {
         Self {
+            camera_import: crate::camera_import::CameraImportOptions::default(),
             last_root_path: None,
             root_folders: Vec::new(),
             pinned_folders: Vec::new(),

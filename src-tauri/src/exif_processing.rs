@@ -1192,6 +1192,11 @@ pub fn try_get_exif_creation_date(path: &Path) -> Option<DateTime<Utc>> {
         return Some(creation_datetime_to_utc(dt));
     }
 
+    try_get_embedded_creation_date(path)
+}
+
+// Card imports read embedded metadata without migrating or repairing source sidecars.
+pub fn try_get_embedded_creation_date(path: &Path) -> Option<DateTime<Utc>> {
     if let Some(exif_obj) = read_exif_from_path(path) {
         for tag in [exif::Tag::DateTimeOriginal, exif::Tag::DateTime] {
             if let Some(field) = exif_obj.get_field(tag, exif::In::PRIMARY)

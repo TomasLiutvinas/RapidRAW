@@ -248,6 +248,7 @@ export interface UIState {
   isCommentOverlayVisible: boolean;
   renameTargetPaths: Array<string>;
   isImportModalOpen: boolean;
+  isCameraImportOpen: boolean;
   isCopyPasteSettingsModalOpen: boolean;
   importTargetFolder: string | null;
   importSourcePaths: Array<string>;
@@ -338,6 +339,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   isCommentOverlayVisible: false,
   renameTargetPaths: [],
   isImportModalOpen: false,
+  isCameraImportOpen: false,
   isCopyPasteSettingsModalOpen: false,
   importTargetFolder: null,
   importSourcePaths: [],

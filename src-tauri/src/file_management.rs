@@ -1540,7 +1540,7 @@ pub fn write_file_atomic(path: &Path, contents: &[u8]) -> std::io::Result<()> {
     }
 }
 
-fn sync_file(file: &fs::File) -> std::io::Result<()> {
+pub(crate) fn sync_file(file: &fs::File) -> std::io::Result<()> {
     match file.sync_all() {
         #[cfg(unix)]
         Err(e) if is_sync_unsupported(&e) => {

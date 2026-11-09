@@ -305,9 +305,13 @@ export function useTauriListeners({
             progress: { current: event.payload.current, total: event.payload.total },
           });
       }),
-      listen('import-complete', () => {
+      listen<{ cancelled?: boolean; errors?: string[] } | null>('import-complete', (event) => {
         if (isEffectActive) {
-          useProcessStore.getState().setImportState({ status: Status.Success });
+          const result = event.payload;
+          useProcessStore.getState().setImportState({
+            status: result?.cancelled ? Status.Cancelled : result?.errors?.length ? Status.Error : Status.Success,
+            errorMessage: result?.errors?.[0] ?? '',
+          });
           refs.current.refreshAllFolderTrees();
           const currentPath = useLibraryStore.getState().currentFolderPath;
           if (currentPath) {

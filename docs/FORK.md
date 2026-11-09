@@ -260,9 +260,53 @@ The launcher binary is rebuilt at its existing path. Its previous version is sav
 Native GUI testing with the user's actual RAW library, physical SD card, and saved export presets
 remains manual. Browser mocks and the synthetic GPU export do not exercise those real inputs.
 
-## Future import-new-only design
+## Camera import
 
-Build deduplicated card import on top of Card mode rather than as a separate browser. A first pass
-should compare stable file facts (size, capture time, camera identifiers, and filename) and confirm
-ambiguous matches with a content hash. Store import records outside source folders. Present files as
-`new`, `already imported`, or `possible duplicate`, and never mutate the card while scanning.
+**Import from camera** is available on the welcome screen and as a red camera button in the
+library toolbar. Opening it checks the saved card mount (initially `/mnt/camera`) and scans all
+media folders recursively. A plain, unmounted directory is not treated as an inserted card on Linux.
+The destination initially defaults to `~/Pictures/Camera`; both paths and RAW/JPEG/video choices
+are remembered in `cameraImport` application settings. All three media categories default on.
+
+The normal procedure is: mount the card, click **Import from camera**, review the preview, and click
+**Import N new files**. No per-folder file selection or repeated template entry is required.
+The fixed layout is `YYYY/YYYY-MM-DD/original filename`, based on embedded capture time. Photos
+read embedded EXIF/RAW metadata without migrating sidecars. Videos use container creation time
+through `ffprobe` when available; missing metadata falls back to file modification time and is
+explicitly counted in the preview. Videos are archived alongside photos; they are not displayed or
+edited in RapidRAW's photo grid. Non-media camera/system files are ignored.
+
+Deduplication indexes existing media throughout the selected destination library. File size narrows
+candidates; SHA-256 confirms identical contents even after a rename or a move within that library.
+Fingerprints are cached in the application data directory, keyed by path, size, modification time,
+and file identity. Changed files invalidate cached checks. Completed checks are saved even when a
+scan is stopped. The first scan of a large, previously imported card can take a while because it
+must read matching file contents. Subsequent scans reuse unchanged fingerprints.
+
+The preview separates new files, already imported files, and conflicting destination names. Only
+new files are copied. A name collision with different contents is skipped and shown for review;
+existing media and edits are never overwritten. Repeated names and duplicate contents within a
+single card are handled before copying. Copies use temporary destination files, preserve source
+modification times, sync to disk, and publish without replacing an existing path. Interrupted copies
+are discarded. Mount changes and changed source files invalidate the preview or stop the copy.
+Destination symlinks are checked before writing. The importer has no delete-from-card operation.
+
+Validation on 2026-11-10:
+
+- Production frontend and Tauri launcher builds, Rust formatting/compiler checks, and the full
+  backend suite (10 passing tests; optional real-card test excluded from ordinary runs).
+- Tests cover recursive RAW/JPEG/video discovery, remembered-layout destinations, content-based
+  deduplication after renames/moves, same-size nonduplicates, filename conflicts, repeated source
+  names, repeat imports, changed sources, cancellation, hash-cache invalidation/serialization,
+  unmounted directories, and symlink destinations pointing back onto the card.
+- Browser checks with mocked IPC cover both entry points, saved preferences, missing-card handling,
+  preview counts, submission by preview ID, completion, scan Stop, and disabled controls while busy.
+  New components pass ESLint; TypeScript diagnostics match the prior 63-error baseline.
+- Real-card read-only discovery found 2937 RAW files, 2937 JPEGs, and 26 MP4s in
+  `DCIM/100CANON` and `DCIM/101CANON`. A representative RAW/JPEG/video from each folder was
+  checked against the real archive: 3 new, 3 already imported, no conflicts, and no fallback dates.
+  A full byte-check pass was stopped to avoid unnecessarily rereading the entire card during testing.
+  No card media was imported. The representative preview is at `/tmp/rapidraw-camera-real-plan.json`.
+
+The pre-feature launcher binary is saved at `/tmp/RapidRAW-pre-camera-import-20261110` for this
+machine session. Future upstream updates must retain this copy-only workflow and its safeguards.
