@@ -42,6 +42,8 @@ port the behavior to the new architecture instead of restoring an obsolete file 
 ### Editing and performance
 
 - Preserve the custom crop/rotation responsiveness work where it is not superseded upstream.
+- Crop dragging previews locally and commits on release; resize targets must take priority over
+  outside-crop rotation. Keep image-under-frame panning and accessible handles at every zoom level.
 - Preserve the custom levels controls.
 - Prefer upstream's current sharpening implementation when it has replaced the old shader pipeline.
 - Keep the Rust `GlobalAdjustments` GPU uniform byte-for-byte aligned with the matching WGSL
@@ -342,3 +344,35 @@ photos and mocked IPC cover creation from a multi-selection, automatic targeting
 Alt+Q remapping, disabled bindings, queued keypresses retaining their captured selections, preference
 restoration after reload, and a complete album export request while only one photo is selected.
 Real library photos and album files were not changed during testing.
+
+## Crop interaction
+
+Crop mode uses a local draft, painted at most once per animation frame. Pointer moves run the
+existing rotated-image constraints without updating the editor component tree, preview pipeline,
+or saved adjustments. Release commits the accepted draft, including a final move before the next
+paint; cancellation restores the starting crop without a saved edit. Keyboard nudges also commit
+the accepted draft rather than potentially stale ReactCrop props. Pixel conversion tolerates
+floating-point roundoff so unchanged integer coordinates do not creep between repeated edits.
+
+Dragging inside the crop moves the photo beneath a stationary frame. Crop boundaries remain inside
+the source photograph, including at fine rotation angles. The frame offset follows viewport zoom
+and is accounted for when leaving crop mode while zoomed. Straighten and guided perspective retain
+their independent preview and drawing overlays.
+
+Corner and midpoint targets are 32 CSS pixels (44 on coarse pointers), with 18-pixel edge strips.
+Their size does not shrink when zooming. Corners have visible white L-shaped marks; locked aspect
+ratios support edge grabs too. A 28-pixel image-fit margin keeps full-image handles accessible.
+Resize controls sit above outside rotation targets, so their outer halves cannot start a rotation.
+Dragging farther outside rotates, with a distinct cursor; cancelling rotation restores its start.
+Alt-drag resizes about the crop centre, retaining the existing Ctrl/Command option. Crop controls
+become hidden and stop intercepting input when leaving the tool.
+
+Validation on 2026-11-10: production frontend and Tauri launcher builds; 19 browser checks against
+the actual Editor/ImageCanvas using a synthetic grid image and mocked IPC. Checks cover all four
+outer-half corner grabs, live/saved state separation, stationary-frame panning, image bounds,
+Alt-centred resizing, aspect locks, cancellation of resize and pan, keyboard nudges, outside rotation,
+constant handle size at 2× zoom, hidden controls, source-point preservation on zoomed crop exit,
+locked-ratio edge resizing, rotated-image bounds, and straighten/perspective preview routing.
+TypeScript retains its existing 63 diagnostics and ESLint its existing 854 findings; no new
+diagnostics by file/rule, and the new component passes ESLint. No real media or sidecars were edited.
+The previous launcher is backed up at `/tmp/RapidRAW-pre-crop-20261110` for this machine session.

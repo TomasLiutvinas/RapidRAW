@@ -16,6 +16,8 @@ import { useShallow } from 'zustand/react/shallow';
 import { prepareAdjustmentsPayload } from '../../utils/backendPayload';
 import {
   calculateCenteredCrop,
+  cropFitScale,
+  type CropChangeOptions,
   getOrientedDimensions,
   isCropWithinBounds,
   calculateStraightenAngle,
@@ -229,6 +231,10 @@ export default function Editor({ onBackToLibrary, onContextMenu, onImageSelect, 
   const prevCropParams = useRef<any>(null);
   const lastValidCropRef = useRef<PercentCrop | null>(null);
   const cropResizeStartRef = useRef<PercentCrop | null>(null);
+  const cropOffsetRef = useRef({ x: 0, y: 0 });
+  const handleCropOffsetChange = useCallback((offset: { x: number; y: number }) => {
+    cropOffsetRef.current = offset;
+  }, []);
 
   const [isMaskHovered, setIsMaskHovered] = useState(false);
   const [isMaskTouchInteracting, setIsMaskTouchInteracting] = useState(false);
@@ -787,6 +793,8 @@ export default function Editor({ onBackToLibrary, onContextMenu, onImageSelect, 
     if (wasCropViewShownRef.current === isCropViewShown) return;
     wasCropViewShownRef.current = isCropViewShown;
 
+    const offset = cropOffsetRef.current;
+    cropOffsetRef.current = { x: 0, y: 0 };
     const container = imageContainerRef.current;
     const crop = getEffectiveCrop();
     const irs = imageRenderSizeRef.current;
@@ -800,9 +808,11 @@ export default function Editor({ onBackToLibrary, onContextMenu, onImageSelect, 
     );
     const viewportW = irs.width + 2 * irs.offsetX;
     const viewportH = irs.height + 2 * irs.offsetY;
-    const uncroppedScale = Math.min(viewportW / W, viewportH / H);
-    const uncroppedLeft = (viewportW - W * uncroppedScale) / 2;
-    const uncroppedTop = (viewportH - H * uncroppedScale) / 2;
+    const uncroppedScale = cropFitScale(viewportW, viewportH, W, H);
+    const uncroppedLeft =
+      (viewportW - W * uncroppedScale) / 2 + (isCropViewShown ? 0 : (offset.x / 100) * W * uncroppedScale);
+    const uncroppedTop =
+      (viewportH - H * uncroppedScale) / 2 + (isCropViewShown ? 0 : (offset.y / 100) * H * uncroppedScale);
     const croppedScale = irs.width / crop.width;
 
     const centerX = container.clientWidth / 2;
@@ -2263,8 +2273,14 @@ export default function Editor({ onBackToLibrary, onContextMenu, onImageSelect, 
   }, [isCropping, adjustments.crop, adjustments.orientationSteps, selectedImage, liveRotation]);
 
   const handleCropChange = useCallback(
-    (_pixelCrop: Crop, percentCrop: PercentCrop) => {
+    (_pixelCrop: Crop, percentCrop: PercentCrop, options?: CropChangeOptions) => {
       if (!selectedImage) return;
+
+      const publish = (next: PercentCrop) => {
+        lastValidCropRef.current = next;
+        if (!options?.previewOnly) setCrop(next);
+        return next;
+      };
 
       const orientationSteps = adjustments.orientationSteps || 0;
       const isSwapped = orientationSteps === 1 || orientationSteps === 3;
@@ -2277,7 +2293,7 @@ export default function Editor({ onBackToLibrary, onContextMenu, onImageSelect, 
       const minPctH = (MIN_CROP_PX / H) * 100;
 
       if (percentCrop.width < minPctW || percentCrop.height < minPctH) {
-        return;
+        return lastValidCropRef.current ?? undefined;
       }
 
       const toPixel = (pc: PercentCrop): Crop => ({
@@ -2288,12 +2304,12 @@ export default function Editor({ onBackToLibrary, onContextMenu, onImageSelect, 
         height: (pc.height / 100) * H,
       });
 
-      const resizeStart = cropResizeStartRef.current;
-      if (resizeStart && isCtrlPressedRef.current) {
+      const resizeStart = options?.startCrop ?? cropResizeStartRef.current;
+      if (resizeStart && (options?.centered || isCtrlPressedRef.current)) {
         const width = 2 * percentCrop.width - resizeStart.width;
         const height = 2 * percentCrop.height - resizeStart.height;
         if (width < minPctW || height < minPctH) {
-          return;
+          return lastValidCropRef.current ?? undefined;
         }
 
         const centered: PercentCrop = {
@@ -2308,21 +2324,15 @@ export default function Editor({ onBackToLibrary, onContextMenu, onImageSelect, 
           checkCropValid(toPixel(candidate), W, H, rotation),
         );
 
-        setCrop(nextCrop);
-        lastValidCropRef.current = nextCrop;
-        return;
+        return publish(nextCrop);
       }
 
       if (checkCropValid(toPixel(percentCrop), W, H, rotation)) {
-        setCrop(percentCrop);
-        lastValidCropRef.current = percentCrop;
-        return;
+        return publish(percentCrop);
       }
 
       if (!lastValidCropRef.current) {
-        setCrop(percentCrop);
-        lastValidCropRef.current = percentCrop;
-        return;
+        return publish(percentCrop);
       }
 
       if (!checkCropValid(toPixel(lastValidCropRef.current), W, H, rotation)) {
@@ -2406,9 +2416,7 @@ export default function Editor({ onBackToLibrary, onContextMenu, onImageSelect, 
           applyAxis('X');
         }
 
-        setCrop(finalCrop);
-        lastValidCropRef.current = finalCrop;
-        return;
+        return publish(finalCrop);
       }
 
       const lastRatio = oldW / oldH;
@@ -2458,8 +2466,7 @@ export default function Editor({ onBackToLibrary, onContextMenu, onImageSelect, 
         const isValidInitially = checkCropValid(toPixel(targetCrop), W, H, rotation);
 
         if (newW <= oldW && isValidInitially) {
-          setCrop(targetCrop);
-          lastValidCropRef.current = targetCrop;
+          publish(targetCrop);
         } else {
           let low = 0;
           let high = 1;
@@ -2482,8 +2489,7 @@ export default function Editor({ onBackToLibrary, onContextMenu, onImageSelect, 
               high = mid;
             }
           }
-          setCrop(bestValid);
-          lastValidCropRef.current = bestValid;
+          publish(bestValid);
         }
       } else {
         const eps = 1e-3;
@@ -2549,9 +2555,9 @@ export default function Editor({ onBackToLibrary, onContextMenu, onImageSelect, 
           height: currB - currT,
         };
 
-        setCrop(finalCrop);
-        lastValidCropRef.current = finalCrop;
+        publish(finalCrop);
       }
+      return lastValidCropRef.current ?? undefined;
     },
     [selectedImage, adjustments.orientationSteps, adjustments.rotation, adjustments.aspectRatio, liveRotation],
   );
@@ -2565,6 +2571,9 @@ export default function Editor({ onBackToLibrary, onContextMenu, onImageSelect, 
         return;
       }
 
+      setCrop(pc);
+      lastValidCropRef.current = pc;
+
       const orientationSteps = adjustments.orientationSteps || 0;
       const isSwapped = orientationSteps === 1 || orientationSteps === 3;
 
@@ -2573,10 +2582,10 @@ export default function Editor({ onBackToLibrary, onContextMenu, onImageSelect, 
 
       const newPixelCrop: Crop = {
         unit: 'px',
-        x: Math.ceil((pc.x / 100) * baseW),
-        y: Math.ceil((pc.y / 100) * baseH),
-        width: Math.floor((pc.width / 100) * baseW),
-        height: Math.floor((pc.height / 100) * baseH),
+        x: Math.ceil((pc.x / 100) * baseW - 1e-7),
+        y: Math.ceil((pc.y / 100) * baseH - 1e-7),
+        width: Math.floor((pc.width / 100) * baseW + 1e-7),
+        height: Math.floor((pc.height / 100) * baseH + 1e-7),
       };
 
       setAdjustments((prev: Adjustments) => {
@@ -2764,6 +2773,7 @@ export default function Editor({ onBackToLibrary, onContextMenu, onImageSelect, 
               crop={crop}
               finalPreviewUrl={finalPreviewUrl}
               handleCropComplete={handleCropComplete}
+              onCropOffsetChange={handleCropOffsetChange}
               imageRenderSize={imageRenderSize}
               isAiEditing={isAiEditing}
               isCropping={isCropping}

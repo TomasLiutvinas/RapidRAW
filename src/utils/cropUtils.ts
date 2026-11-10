@@ -1,4 +1,14 @@
-import { Crop } from 'react-image-crop';
+import type { Crop, PercentCrop } from 'react-image-crop';
+
+export interface CropChangeOptions {
+  previewOnly?: boolean;
+  centered?: boolean;
+  startCrop?: PercentCrop;
+}
+
+// Leave room for handles even when the photograph fills the viewport.
+export const cropFitScale = (viewportW: number, viewportH: number, width: number, height: number) =>
+  Math.min(Math.max(1, viewportW - 56) / width, Math.max(1, viewportH - 56) / height);
 
 // aspectRatio 0 locks the crop to the image's own ratio, null leaves it free.
 // 0 is the default, because the image ratio differs per image and cannot be stored as one number.

@@ -1,0 +1,100 @@
+.rapidraw-crop-viewport {
+  position: relative;
+  touch-action: none;
+}
+
+.rapidraw-crop.ReactCrop {
+  display: block;
+  overflow: visible;
+  pointer-events: none;
+  --rc-drag-handle-size: 32px;
+  --rc-drag-handle-mobile-size: 44px;
+  --rc-drag-bar-size: 18px;
+  --rc-focus-color: var(--app-accent);
+}
+
+.rapidraw-crop .ReactCrop__crop-selection {
+  z-index: 30;
+  pointer-events: auto;
+  cursor: grab;
+  animation: none;
+  background-image: none;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  outline: 1px solid rgba(0, 0, 0, 0.5);
+}
+
+.rapidraw-crop .ReactCrop__crop-selection:active {
+  cursor: grabbing;
+}
+.rapidraw-crop .ReactCrop__drag-handle {
+  background: transparent;
+  border: 0;
+  opacity: 1;
+}
+
+.rapidraw-crop .ReactCrop__drag-handle::after {
+  content: '';
+  position: absolute;
+  inset: 7px;
+  border: 0 solid white;
+  filter: drop-shadow(0 1px 1px black);
+}
+
+.rapidraw-crop [data-ord='nw']::after {
+  inset: 50% auto auto 50%;
+  width: 18px;
+  height: 18px;
+  border-top-width: 3px;
+  border-left-width: 3px;
+}
+.rapidraw-crop [data-ord='ne']::after {
+  inset: 50% 50% auto auto;
+  width: 18px;
+  height: 18px;
+  border-top-width: 3px;
+  border-right-width: 3px;
+}
+.rapidraw-crop [data-ord='sw']::after {
+  inset: auto auto 50% 50%;
+  width: 18px;
+  height: 18px;
+  border-bottom-width: 3px;
+  border-left-width: 3px;
+}
+.rapidraw-crop [data-ord='se']::after {
+  inset: auto 50% 50% auto;
+  width: 18px;
+  height: 18px;
+  border-bottom-width: 3px;
+  border-right-width: 3px;
+}
+.rapidraw-crop [data-ord='n']::after,
+.rapidraw-crop [data-ord='s']::after {
+  border-top-width: 3px;
+  top: 50%;
+}
+.rapidraw-crop [data-ord='e']::after,
+.rapidraw-crop [data-ord='w']::after {
+  border-left-width: 3px;
+  left: 50%;
+}
+
+.rapidraw-crop-rotate {
+  position: absolute;
+  z-index: 20;
+  pointer-events: auto;
+  touch-action: none;
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M5 11a7 7 0 1 1 2 6M5 4v7h7' fill='none' stroke='black' stroke-width='4'/%3E%3Cpath d='M5 11a7 7 0 1 1 2 6M5 4v7h7' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E")
+      12 12,
+    crosshair;
+}
+
+/* Locked ratios still support grabbing any edge, as well as the corners. */
+.rapidraw-crop.ReactCrop--fixed-aspect .ReactCrop__drag-bar,
+.rapidraw-crop.ReactCrop--fixed-aspect .ReactCrop__drag-handle.ord-n,
+.rapidraw-crop.ReactCrop--fixed-aspect .ReactCrop__drag-handle.ord-e,
+.rapidraw-crop.ReactCrop--fixed-aspect .ReactCrop__drag-handle.ord-s,
+.rapidraw-crop.ReactCrop--fixed-aspect .ReactCrop__drag-handle.ord-w {
+  display: block;
+}
